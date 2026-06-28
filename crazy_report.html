@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crazy Line — דוח ביצועים</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800;900&display=swap');
+  :root {
+    --bg:#fdf5f9; --surface:#fff; --surface2:#fce8f3; --border:#f0d0e4;
+    --text:#1a0d14; --text2:#5a2d47; --muted:#a07090;
+    --green:#10b981; --green-bg:#ecfdf5; --yellow:#f59e0b; --yellow-bg:#fffbeb;
+    --red:#ef4444; --red-bg:#fef2f2; --blue:#5b6ef5; --blue-bg:#eef0fe;
+    --brand:#7c3aed; --nonbrand:#06b6d4;
+    --client:#EC0E8D; --client2:#f43fa8;
+    --shadow-sm:0 1px 3px rgba(0,0,0,.06); --shadow:0 2px 10px rgba(0,0,0,.08);
+    --shadow-lg:0 10px 30px rgba(0,0,0,.12); --radius:16px; --font:'Rubik',system-ui,sans-serif;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); font-family:var(--font); font-size:14px; line-height:1.5; }
+  .hero {
+    background:linear-gradient(135deg, var(--client), var(--client2));
+    padding:32px; color:#fff; position:relative; overflow:hidden;
+  }
+  .hero::after { content:''; position:absolute; left:-60px; top:-60px; width:240px; height:240px;
+    background:rgba(255,255,255,.1); border-radius:50%; }
+  .hero::before { content:''; position:absolute; left:80px; bottom:-90px; width:180px; height:180px;
+    background:rgba(255,255,255,.08); border-radius:50%; }
+  .hero-content { max-width:1200px; margin:0 auto; position:relative; z-index:2; }
+  .hero-top { display:flex; align-items:center; gap:16px; margin-bottom:24px; }
+  .hero-logo { width:54px; height:54px; background:rgba(255,255,255,.2); border:2px solid rgba(255,255,255,.4);
+    border-radius:14px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:20px;
+    backdrop-filter:blur(10px); }
+  .hero h1 { font-size:24px; font-weight:800; letter-spacing:-.5px; }
+  .hero-sub { font-size:13px; opacity:.9; font-weight:500; margin-top:2px; }
+  .date-bar { display:flex; align-items:center; gap:8px; margin-bottom:22px; position:relative; z-index:3; flex-wrap:wrap; }
+  .date-filter { display:flex; align-items:center; gap:7px; background:rgba(255,255,255,.18); border:1.5px solid rgba(255,255,255,.3); border-radius:10px; padding:7px 12px; backdrop-filter:blur(8px); }
+  .date-filter select { border:none; background:transparent; font-size:12.5px; color:#fff; font-family:var(--font); font-weight:700; cursor:pointer; outline:none; }
+  .date-filter select option { color:#1e2640; }
+  .date-custom { display:none; align-items:center; gap:6px; background:rgba(255,255,255,.18); border:1.5px solid rgba(255,255,255,.3); border-radius:10px; padding:5px 10px; backdrop-filter:blur(8px); }
+  .date-custom input { background:rgba(255,255,255,.9); border:none; border-radius:6px; padding:4px 8px; font-size:11.5px; font-family:var(--font); color:#1e2640; outline:none; }
+  .date-custom button { background:#fff; color:var(--client); border:none; border-radius:6px; padding:5px 13px; font-size:11.5px; cursor:pointer; font-family:var(--font); font-weight:800; }
+  .date-note { font-size:11.5px; opacity:.92; font-weight:500; }
+  .hero-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; }
+  .hs { background:rgba(255,255,255,.15); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,.2);
+    border-radius:14px; padding:16px 18px; }
+  .hs-label { font-size:11.5px; opacity:.85; font-weight:600; margin-bottom:6px; }
+  .hs-val { font-size:26px; font-weight:800; letter-spacing:-.8px; line-height:1; }
+  .hs-sub { font-size:11px; opacity:.8; margin-top:5px; }
+  .wrap { max-width:1200px; margin:0 auto; padding:26px 32px; }
+  .sec { font-size:13px; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:.5px;
+    margin:30px 0 15px; display:flex; align-items:center; gap:8px; }
+  .sec:first-child { margin-top:0; }
+  .hl-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-top:-44px;
+    position:relative; z-index:3; }
+  .hl-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:18px 20px; box-shadow:var(--shadow); border-top:3px solid var(--client); }
+  .hl-label { font-size:11.5px; color:var(--muted); font-weight:600; margin-bottom:8px; }
+  .hl-val { font-size:28px; font-weight:800; color:var(--client); letter-spacing:-1px; line-height:1; }
+  .hl-sub { font-size:11.5px; color:var(--text2); margin-top:7px; font-weight:600; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:22px; box-shadow:var(--shadow-sm); }
+  .grid-2 { display:grid; grid-template-columns:1.6fr 1fr; gap:16px; }
+  @media(max-width:820px){ .grid-2 { grid-template-columns:1fr; } }
+  .chart-title { font-size:14px; font-weight:700; margin-bottom:4px; }
+  .chart-sub { font-size:11.5px; color:var(--muted); margin-bottom:16px; font-weight:500; }
+  .chart-box { position:relative; height:280px; }
+  .chart-box.sm { height:240px; }
+  .bn-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; max-width:560px; }
+  .bn-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px;
+    box-shadow:var(--shadow-sm); border-right:4px solid; }
+  .bn-brand { border-right-color:var(--brand); } .bn-nonbrand { border-right-color:var(--nonbrand); }
+  .bn-tag { font-size:12px; font-weight:700; margin-bottom:8px; }
+  .bn-brand .bn-tag { color:var(--brand); } .bn-nonbrand .bn-tag { color:var(--nonbrand); }
+  .bn-roas { font-size:30px; font-weight:800; letter-spacing:-1px; }
+  .bn-brand .bn-roas { color:var(--brand); } .bn-nonbrand .bn-roas { color:var(--nonbrand); }
+  .bn-detail { font-size:12px; color:var(--muted); margin-top:6px; font-weight:600; }
+  .ch-row { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+  .ch-row:last-child { margin-bottom:0; }
+  .ch-name { width:115px; font-size:12px; font-weight:600; flex-shrink:0; }
+  .ch-track { flex:1; height:20px; background:var(--surface2); border-radius:6px; overflow:hidden; }
+  .ch-fill { height:100%; border-radius:6px; transition:width .8s cubic-bezier(.4,0,.2,1); }
+  .ch-val { width:95px; font-size:11.5px; font-weight:700; text-align:left; flex-shrink:0; }
+  .tbl-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden;
+    box-shadow:var(--shadow-sm); }
+  .tbl-scroll { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; min-width:420px; }
+  th { background:var(--surface2); padding:12px 15px; font-size:11px; color:var(--text2); font-weight:700;
+    text-align:right; border-bottom:1px solid var(--border); white-space:nowrap; }
+  td { padding:11px 15px; border-bottom:1px solid var(--border); font-size:13px; font-weight:500; }
+  tr:last-child td { border-bottom:none; }
+  tbody tr:hover td { background:var(--surface2); }
+  .num { font-variant-numeric:tabular-nums; font-weight:600; }
+  .chip { display:inline-block; font-size:11px; font-weight:700; padding:3px 9px; border-radius:6px; }
+  .c-green { background:var(--green-bg); color:var(--green); }
+  .c-yellow { background:var(--yellow-bg); color:var(--yellow); }
+  .c-red { background:var(--red-bg); color:var(--red); }
+  .tag { display:inline-block; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:700; }
+  .tag-brand { background:#7c3aed18; color:var(--brand); }
+  .tag-nonbrand { background:#06b6d418; color:var(--nonbrand); }
+  .funnel { display:flex; flex-direction:column; gap:10px; }
+  .fn-row { display:flex; align-items:center; gap:14px; }
+  .fn-bar { height:44px; border-radius:10px; display:flex; align-items:center; padding:0 18px; color:#fff;
+    font-weight:700; font-size:14px; min-width:120px; box-shadow:var(--shadow-sm); }
+  .fn-meta { font-size:12px; color:var(--text2); font-weight:600; }
+  .alert { border-radius:12px; padding:14px 16px; font-size:13px; line-height:1.55; margin-bottom:11px;
+    display:flex; gap:11px; align-items:flex-start; }
+  .a-red { background:var(--red-bg); border:1px solid #fecaca; color:#991b1b; }
+  .a-yellow { background:var(--yellow-bg); border:1px solid #fde68a; color:#92400e; }
+  .a-green { background:var(--green-bg); border:1px solid #a7f3d0; color:#065f46; }
+  .a-blue { background:var(--blue-bg); border:1px solid #c7d2fe; color:#3730a3; }
+  .footer { text-align:center; padding:26px; font-size:11.5px; color:var(--muted); border-top:1px solid var(--border);
+    margin-top:36px; font-weight:500; }
+  @media(max-width:640px){ .wrap,.hero { padding-left:16px; padding-right:16px; } .hero-stats { grid-template-columns:repeat(2,1fr); } }
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="hero-content">
+    <div class="hero-top">
+      <div class="hero-logo">CL</div>
+      <div><h1>Crazy Line</h1><div class="hero-sub">דוח ביצועים · Meta · Google Ads · GA4 · 30 ימים אחרונים</div></div>
+    </div>
+    <div class="date-bar">
+      <div class="date-filter">
+        <span style="font-size:13px">📅</span>
+        <select id="dateSel" onchange="changeDates()">
+          <option value="7">7 ימים</option><option value="14">14 ימים</option>
+          <option value="30" selected>30 ימים אחרונים</option><option value="90">90 ימים</option>
+          <option value="custom">בחירה ידנית</option>
+        </select>
+      </div>
+      <div class="date-custom" id="dateCustom">
+        <input type="date" id="dFrom"><span style="opacity:.7">—</span><input type="date" id="dTo">
+        <button onclick="applyCustom()">החל</button>
+      </div>
+      <span class="date-note" id="dateNote">30 הימים האחרונים</span>
+    </div>
+    <div class="hero-stats">
+      <div class="hs"><div class="hs-label">הכנסות מהאתר (GA4)</div><div class="hs-val">₪1,211,566</div><div class="hs-sub">4,044 עסקאות</div></div>
+      <div class="hs"><div class="hs-label">סך הוצאות פרסום</div><div class="hs-val">₪110,971</div><div class="hs-sub">Meta + Google</div></div>
+      <div class="hs"><div class="hs-label">ROAS משולב</div><div class="hs-val">10.9x</div><div class="hs-sub">הכנסות ÷ הוצאות</div></div>
+      <div class="hs"><div class="hs-label">סשנים</div><div class="hs-val">391.5K</div><div class="hs-sub">1.03% המרה</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="hl-grid"><div class="hl-card">
+          <div class="hl-label">ROAS Meta משוקלל</div>
+          <div class="hl-val">10.8x</div>
+          <div class="hl-sub">יעד: 8x · עומד ב-+35%</div>
+        </div><div class="hl-card">
+          <div class="hl-label">Brand ROAS (Google)</div>
+          <div class="hl-val">157x</div>
+          <div class="hl-sub">ביקוש מותג גבוה</div>
+        </div><div class="hl-card">
+          <div class="hl-label">רכישות Meta (30 יום)</div>
+          <div class="hl-val">2,701</div>
+          <div class="hl-sub">~90 ביום</div>
+        </div></div>
+
+  <div class="sec">📈 מגמת ביצועים יומית</div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="chart-title">הכנסות יומיות מהאתר (GA4) + הוצאות Meta</div>
+      <div class="chart-sub">30 הימים האחרונים · 05-28 עד 06-26</div>
+      <div class="chart-box"><canvas id="trendChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="chart-title">פילוח תקציב לפי פלטפורמה</div>
+      <div class="chart-sub">חלוקת הוצאות Meta מול Google</div>
+      <div class="chart-box sm"><canvas id="pieChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="sec">🏷️ Google Ads — Brand מול Non-Brand</div>
+        <div class="bn-grid">
+          <div class="bn-card bn-brand">
+            <div class="bn-tag">🟣 Brand</div>
+            <div class="bn-roas">122.4x</div>
+            <div class="bn-detail">₪2,711 → ₪331,820</div>
+          </div>
+          <div class="bn-card bn-nonbrand">
+            <div class="bn-tag">🔵 Non-Brand</div>
+            <div class="bn-roas">11.6x</div>
+            <div class="bn-detail">₪29,439 → ₪340,457</div>
+          </div>
+        </div>
+
+  <div class="sec">💰 הכנסות לפי ערוץ (GA4)</div>
+  <div class="card"><div class="ch-row">
+          <div class="ch-name">חיפוש בתשלום</div>
+          <div class="ch-track"><div class="ch-fill" style="width:100.0%;background:#ea4335"></div></div>
+          <div class="ch-val">₪322,497</div>
+        </div><div class="ch-row">
+          <div class="ch-name">סושיאל בתשלום</div>
+          <div class="ch-track"><div class="ch-fill" style="width:85.05195397166486%;background:#0866ff"></div></div>
+          <div class="ch-val">₪274,290</div>
+        </div><div class="ch-row">
+          <div class="ch-name">SMS</div>
+          <div class="ch-track"><div class="ch-fill" style="width:60.450484810711416%;background:#ec4899"></div></div>
+          <div class="ch-val">₪194,951</div>
+        </div><div class="ch-row">
+          <div class="ch-name">אימייל</div>
+          <div class="ch-track"><div class="ch-fill" style="width:41.359144426149705%;background:#f59e0b"></div></div>
+          <div class="ch-val">₪133,382</div>
+        </div><div class="ch-row">
+          <div class="ch-name">ישיר</div>
+          <div class="ch-track"><div class="ch-fill" style="width:27.286765458283334%;background:#6b7280"></div></div>
+          <div class="ch-val">₪87,999</div>
+        </div><div class="ch-row">
+          <div class="ch-name">חיפוש אורגני</div>
+          <div class="ch-track"><div class="ch-fill" style="width:23.065020759883037%;background:#10b981"></div></div>
+          <div class="ch-val">₪74,384</div>
+        </div><div class="ch-row">
+          <div class="ch-name">Cross-network</div>
+          <div class="ch-track"><div class="ch-fill" style="width:18.07489682074562%;background:#a78bfa"></div></div>
+          <div class="ch-val">₪58,291</div>
+        </div><div class="ch-row">
+          <div class="ch-name">שופינג בתשלום</div>
+          <div class="ch-track"><div class="ch-fill" style="width:0.8595428794686463%;background:#34a853"></div></div>
+          <div class="ch-val">₪2,772</div>
+        </div></div>
+
+  <div class="sec">🔻 משפך המרה (GA4)</div>
+  <div class="card">
+    <div class="funnel">
+      <div class="fn-row"><div class="fn-bar" style="background:var(--client);width:100%">סשנים · 391,465</div></div>
+      <div class="fn-row"><div class="fn-bar" style="background:var(--client2);width:55%">הוספות לעגלה · 74,418</div><div class="fn-meta">19.0% מהסשנים</div></div>
+      <div class="fn-row"><div class="fn-bar" style="background:#10b981;width:30%">רכישות · 4,044</div><div class="fn-meta">1.03% שיעור המרה</div></div>
+    </div>
+  </div>
+
+  <div class="sec">📋 קמפייני Meta מובילים</div>
+  <div class="tbl-card"><div class="tbl-scroll"><table>
+    <thead><tr><th>קמפיין</th><th>הוצאה</th><th>ROAS</th><th>רכישות</th></tr></thead>
+    <tbody><tr><td>sales_dynamic_caru</td><td class="num">₪8,747</td>
+          <td><span class="chip c-green">10.15x</span></td><td class="num">322</td></tr><tr><td>sales_influencers_v3</td><td class="num">₪10,200</td>
+          <td><span class="chip c-green">9.84x</span></td><td class="num">254</td></tr><tr><td>basic_sales_campaign</td><td class="num">₪7,210</td>
+          <td><span class="chip c-green">10.49x</span></td><td class="num">271</td></tr><tr><td>abandoned_cart</td><td class="num">₪6,006</td>
+          <td><span class="chip c-green">12.98x</span></td><td class="num">257</td></tr><tr><td>sales_dress_v3</td><td class="num">₪5,987</td>
+          <td><span class="chip c-green">13.24x</span></td><td class="num">224</td></tr><tr><td>lucci_sales_v3</td><td class="num">₪5,899</td>
+          <td><span class="chip c-green">13.47x</span></td><td class="num">205</td></tr><tr><td>Test_6mo</td><td class="num">₪3,357</td>
+          <td><span class="chip c-green">15.42x</span></td><td class="num">165</td></tr><tr><td>lp-views-ai-video</td><td class="num">₪3,899</td>
+          <td><span class="chip c-red">0.22x</span></td><td class="num">4</td></tr></tbody>
+  </table></div></div>
+
+  <div class="sec">📋 קמפייני Google Ads</div>
+        <div class="tbl-card"><div class="tbl-scroll"><table>
+          <thead><tr><th>קמפיין</th><th>סוג</th><th>הוצאה</th><th>ROAS</th></tr></thead>
+          <tbody><tr><td>Brand Campaign</td><td><span class="tag tag-brand">Brand</span></td>
+              <td class="num">₪2,097</td><td><span class="chip c-green">157x</span></td></tr><tr><td>pmax-items-over-99</td><td><span class="tag tag-nonbrand">Non-Brand</span></td>
+              <td class="num">₪11,238</td><td><span class="chip c-green">16.7x</span></td></tr><tr><td>pmax-categories</td><td><span class="tag tag-nonbrand">Non-Brand</span></td>
+              <td class="num">₪9,002</td><td><span class="chip c-green">7.3x</span></td></tr><tr><td>pmax-items-to-99-v2</td><td><span class="tag tag-nonbrand">Non-Brand</span></td>
+              <td class="num">₪3,484</td><td><span class="chip c-green">15.4x</span></td></tr><tr><td>demand_gen_v2</td><td><span class="tag tag-nonbrand">Non-Brand</span></td>
+              <td class="num">₪1,315</td><td><span class="chip c-green">22.6x</span></td></tr><tr><td>yt-video-views</td><td><span class="tag tag-nonbrand">Non-Brand</span></td>
+              <td class="num">₪3,101</td><td><span class="chip c-red">0.07x</span></td></tr></tbody></table></div></div>
+
+  <div class="sec">📝 סיכום תקופה</div>
+  <div class="card" style="margin-bottom:20px;line-height:1.8;font-size:13.5px">
+    בתקופה 28/05–26/06 הושקעו <strong>₪110,971</strong> בפרסום (Meta + Google).
+    הכנסות האתר לפי GA4 עמדו על <strong>₪1,211,566</strong> — ROAS משולב של <strong>10.9x</strong>.
+    ב-Meta, קמפיינים מרכזיים שמרו על יציבות עם ROAS ממוצע 10.8x לאורך התקופה.
+    ב-Google, קמפיין Brand תפס ביקוש קיים ביעילות גבוהה, בעוד קמפיין וידאו הניב תוצאות נמוכות.
+    מומלץ לבחון ניתוב תקציב מחדש בהתאם להמלצות להלן.
+  </div>
+
+  <div class="sec">📊 השוואה לתקופה קודמת (30/04–27/05)</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px">
+    <div class="card" style="text-align:center">
+      <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:6px">הוצאות פרסום</div>
+      <div style="font-size:20px;font-weight:800">₪110,971</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">תקופה קודמת: ~₪105,000</div>
+      <div style="font-size:11px;font-weight:700;margin-top:4px;color:#f59e0b">+5.7%</div>
+    </div>
+    <div class="card" style="text-align:center">
+      <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:6px">ROAS משולב</div>
+      <div style="font-size:20px;font-weight:800">10.9x</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">תקופה קודמת: ~10.2x</div>
+      <div style="font-size:11px;font-weight:700;margin-top:4px;color:#10b981">+6.9%</div>
+    </div>
+    <div class="card" style="text-align:center">
+      <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:6px">רכישות Meta</div>
+      <div style="font-size:20px;font-weight:800">2,701</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">תקופה קודמת: ~2,540</div>
+      <div style="font-size:11px;font-weight:700;margin-top:4px;color:#10b981">+6.3%</div>
+    </div>
+    <div class="card" style="text-align:center">
+      <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:6px">יעד ROAS</div>
+      <div style="font-size:20px;font-weight:800">✓ עומד</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">יעד: 8x · בפועל: 10.9x</div>
+      <div style="font-size:11px;font-weight:700;margin-top:4px;color:#10b981">+36% מעל יעד</div>
+    </div>
+  </div>
+
+  <div class="sec">🎯 המלצות</div>
+  <div class="alert a-red">⚠️ <div><b>עצירת קמפייני וידאו:</b> lp-views-ai-video (Meta) הניב ROAS 0.22x על ₪3,899. yt-video-views (Google) הניב ROAS 0.07x על ₪3,101. מומלץ לעצור את שניהם ולהעביר תקציב לקמפיינים עם ROAS מוכח.</div></div>
+  <div class="alert a-blue">💡 <div><b>הגדלת תקציב — קמפיינים יציבים:</b> abandoned_cart (ROAS 12.98x), sales_dress_v3 (13.24x) ו-lucci_sales_v3 (13.47x) מציגים ביצועים עקביים. מומלץ לבחון הגדלת תקציב של 15–20% לכל אחד.</div></div>
+  <div class="alert a-blue">💡 <div><b>הרחבת Brand Campaign ב-Google:</b> הקמפיין מציג ROAS גבוה על תקציב נמוך יחסית (₪2,097). מומלץ לבחון הגדלה מבוקרת תוך מעקב אחר עלות לקליק.</div></div>
+  <div class="alert a-yellow">📊 <div><b>שיפור שיעור המרה:</b> 391,465 סשנים עם 4,044 רכישות = שיעור המרה 1.03%. 19% מהסשנים מגיעים להוספה לעגלה — מומלץ לבחון את תהליך ה-Checkout.</div></div>
+  
+</div>
+
+<div class="footer">Crazy Line · דוח שהופק על ידי הסוכנות · נתונים: Meta + Google Ads + GA4 · יוני 2026</div>
+
+<script>
+const COLOR='#EC0E8D', COLOR2='#f43fa8';
+// Trend chart
+new Chart(document.getElementById('trendChart'), {
+  type:'line',
+  data:{
+    labels:["05-28", "05-29", "05-30", "05-31", "06-01", "06-02", "06-03", "06-04", "06-05", "06-06", "06-07", "06-08", "06-09", "06-10", "06-11", "06-12", "06-13", "06-14", "06-15", "06-16", "06-17", "06-18", "06-19", "06-20", "06-21", "06-22", "06-23", "06-24", "06-25", "06-26"],
+    datasets:[{
+      label:'הכנסות GA4',
+      data:[28048, 31235, 50136, 33181, 42842, 42118, 27377, 28825, 55611, 52304, 37787, 26900, 51035, 64569, 24669, 81188, 63479, 38191, 26868, 28507, 26507, 29003, 54516, 73916, 35424, 38516, 35289, 52906, 21364, 42169],
+      borderColor:COLOR, backgroundColor:'#EC0E8D1a',
+      borderWidth:2.5, tension:0.35, pointRadius:0, fill:true, yAxisID:'y'
+    },{
+          label: 'הוצאות Meta',
+          data: [1989, 2514, 2802, 2391, 2399, 2125, 2194, 2142, 2967, 3187, 2751, 2784, 2692, 3096, 2495, 3313, 3216, 2943, 2889, 2698, 2498, 2265, 2926, 2857, 2656, 2496, 2649, 3081, 2565, 2896],
+          borderColor: '#0866ff',
+          backgroundColor: 'rgba(8,102,255,0.05)',
+          borderWidth: 2, tension: 0.35, pointRadius: 0, yAxisID: 'y1', fill: true
+        }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:true,position:'top',labels:{font:{family:'Rubik',size:11},usePointStyle:true,padding:14}},
+      tooltip:{rtl:true,bodyFont:{family:'Rubik'},titleFont:{family:'Rubik'},callbacks:{label:c=>c.dataset.label+': ₪'+c.parsed.y.toLocaleString()}}},
+    scales:{
+      y:{position:'right',grid:{color:'#eef2f9'},ticks:{font:{family:'Rubik',size:10},callback:v=>'₪'+(v/1000)+'K'}},
+      y1:{position:'left',grid:{display:false},ticks:{font:{family:'Rubik',size:10},callback:v=>'₪'+(v/1000)+'K'}},
+      x:{grid:{display:false},ticks:{font:{family:'Rubik',size:9},maxRotation:0,autoSkip:true,maxTicksLimit:8}}
+    }
+  }
+});
+// Pie chart
+new Chart(document.getElementById('pieChart'), {
+  type:'doughnut',
+  data:{labels:["Meta Ads", "Google Ads"],datasets:[{data:[78821, 32150],
+    backgroundColor:["#0866ff", "#ea4335"],borderWidth:3,borderColor:'#fff'}]},
+  options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
+    plugins:{legend:{position:'bottom',labels:{font:{family:'Rubik',size:12},usePointStyle:true,padding:16}},
+      tooltip:{rtl:true,bodyFont:{family:'Rubik'},callbacks:{label:c=>c.label+': ₪'+c.parsed.toLocaleString()}}}}
+});
+
+// ===== DATE FILTER (כמו בדשבורד הסוכנות) =====
+const _today=new Date(), _d30=new Date(); _d30.setDate(_today.getDate()-30);
+function changeDates() {
+  const v=document.getElementById('dateSel').value;
+  const dc=document.getElementById('dateCustom');
+  if(v==='custom'){ dc.style.display='flex';
+    document.getElementById('dTo').value=_today.toISOString().split('T')[0];
+    document.getElementById('dFrom').value=_d30.toISOString().split('T')[0];
+    document.getElementById('dateNote').textContent='בחר טווח ולחץ החל';
+  } else { dc.style.display='none';
+    const lbl={'7':'7 הימים האחרונים','14':'14 הימים האחרונים','30':'30 הימים האחרונים','90':'90 הימים האחרונים'};
+    document.getElementById('dateNote').innerHTML=lbl[v]+' · ⚠️ לרענון נתונים לטווח זה בקש מהסוכנות לעדכן';
+  }
+}
+function applyCustom() {
+  const f=document.getElementById('dFrom').value, t=document.getElementById('dTo').value;
+  if(!f||!t) return;
+  const ff=new Date(f).toLocaleDateString('he-IL'), tt=new Date(t).toLocaleDateString('he-IL');
+  document.getElementById('dateNote').innerHTML='טווח: '+ff+' — '+tt+' · ⚠️ הנתונים המוצגים ל-30 יום. לרענון בקש עדכון';
+}
+</script>
+</body>
+</html>
