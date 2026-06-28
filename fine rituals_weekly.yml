@@ -1,0 +1,29 @@
+name: Fine Rituals Weekly Report
+
+on:
+  schedule:
+    - cron: '0 5 * * 0'  # כל ראשון ב-08:00 שעון ישראל
+  workflow_dispatch:
+
+jobs:
+  send-report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run report
+        env:
+          WINDSOR_API_KEY: ${{ secrets.WINDSOR_API_KEY }}
+          META_AD_ACCOUNT_ID: "918073650786458"
+          GA4_ACCOUNT_ID: "518599842"
+          GOOGLE_ADS_ACCOUNT_ID: "700-518-0619"
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO_FINE_RITUALS }}
+          ACCOUNT_NAME: "Fine Rituals"
+        run: python main.py --mode weekly
