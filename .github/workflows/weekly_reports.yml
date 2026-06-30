@@ -35,6 +35,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           cp reports_output/*.html .
-          git add *_report.html
-          git diff --staged --quiet || git commit -m "🔄 עדכון דוחות שבועיים אוטומטי"
+          git add *_report.html index.html
+          git diff --staged --quiet || git commit -m "🔄 עדכון דוחות שבועיים + דשבורד סוכנות אוטומטי"
           git push
