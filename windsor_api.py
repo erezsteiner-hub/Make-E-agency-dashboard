@@ -1,111 +1,100 @@
 """
-windsor_api.py — מחליף את meta_api.py
-מושך Meta Ads + Google Ads + GA4 דרך Windsor REST API
-בקריאה אחת לכל פלטפורמה, ללא טוקנים נפרדים.
+windsor_api.py — שליפת נתונים מ-Windsor REST API
+תוקן עם הפרמטרים הנכונים שגילינו:
+- endpoint ספציפי לכל connector (לא /all)
+- filter=[["account_id","eq",ID]] לסינון לפי חשבון (לא account_id ישירות)
+- GA4 דורש סינון בצד הלקוח (לא תומך ב-filter על account_id בשרת)
 """
 
-import os
 import requests
 from datetime import date, timedelta
+import json
 
 
-WINDSOR_BASE = "https://connectors.windsor.ai/all"
+WINDSOR_BASE = "https://connectors.windsor.ai"
 
 
 class WindsorClient:
-    def __init__(self, api_key: str, meta_account_id: str = None,
-                 google_ads_account_id: str = None, ga4_account_id: str = None):
+    def __init__(self, api_key: str):
         self.api_key = api_key
-        self.meta_account_id = meta_account_id
-        self.google_ads_account_id = google_ads_account_id
-        self.ga4_account_id = ga4_account_id
 
-    def _fetch(self, fields: list, date_from: str, date_to: str,
-               connector: str = "all", account_id: str = None) -> list:
-        """שולח בקשה ל-Windsor REST API ומחזיר רשימת שורות"""
+    def _fetch(self, connector: str, fields: list, date_from: str, date_to: str,
+               account_id: str = None, use_server_filter: bool = True) -> list:
         params = {
             "api_key": self.api_key,
             "date_from": date_from,
             "date_to": date_to,
             "fields": ",".join(fields),
-            "connector": connector,
         }
-        if account_id:
-            params["account_id"] = account_id
+        if account_id and use_server_filter:
+            params["filter"] = json.dumps([["account_id", "eq", account_id]])
 
-        resp = requests.get(WINDSOR_BASE, params=params, timeout=60)
+        url = f"{WINDSOR_BASE}/{connector}"
+        resp = requests.get(url, params=params, timeout=30)
         resp.raise_for_status()
         data = resp.json()
-        return data.get("data", data) if isinstance(data, dict) else data
+        rows = data.get("data", data) if isinstance(data, dict) else data
 
-    def get_meta_campaign_data(self, date_from: str, date_to: str) -> list:
-        """שולף נתוני Meta Ads ברמת קמפיין"""
-        fields = [
-            "date", "source", "account_name",
-            "campaign", "spend", "impressions", "clicks",
-            "conversions", "revenue", "ctr", "cpc",
-        ]
-        rows = self._fetch(fields, date_from, date_to,
-                           connector="facebook", account_id=self.meta_account_id)
+        # סינון בטיחות בצד הלקוח
+        if account_id:
+            target = "".join(c for c in str(account_id) if c.isdigit())
+            filtered = [r for r in rows if "".join(c for c in str(r.get("account_id", "")) if c.isdigit()) == target]
+            if filtered:
+                return filtered
         return rows
 
-    def get_google_ads_data(self, date_from: str, date_to: str) -> list:
-        """שולף נתוני Google Ads ברמת קמפיין"""
-        if not self.google_ads_account_id:
+    def get_meta_campaign_data(self, account_id: str, date_from: str, date_to: str) -> list:
+        return self._fetch("facebook",
+            ["account_id", "campaign", "spend", "impressions", "clicks",
+             "actions_omni_purchase", "action_values_omni_purchase"],
+            date_from, date_to, account_id)
+
+    def get_google_ads_data(self, account_id: str, date_from: str, date_to: str) -> list:
+        if not account_id:
             return []
-        fields = [
-            "date", "source", "account_name",
-            "campaign", "spend", "impressions", "clicks",
-            "conversions", "conversions_value", "ctr", "cpc",
-        ]
-        rows = self._fetch(fields, date_from, date_to,
-                           connector="google_ads", account_id=self.google_ads_account_id)
-        return rows
+        return self._fetch("google_ads",
+            ["account_id", "campaign", "spend", "clicks", "conversions", "conversions_value"],
+            date_from, date_to, account_id)
 
-    def get_ga4_data(self, date_from: str, date_to: str) -> list:
-        """שולף נתוני GA4 — הכנסות אמיתיות מהאתר"""
-        if not self.ga4_account_id:
+    def get_ga4_total(self, account_id: str, date_from: str, date_to: str) -> list:
+        if not account_id:
             return []
-        fields = [
-            "date", "source", "account_name",
-            "sessions", "purchase_revenue", "transactions",
-            "add_to_carts", "session_default_channel_group",
-        ]
-        rows = self._fetch(fields, date_from, date_to,
-                           connector="googleanalytics4", account_id=self.ga4_account_id)
-        return rows
+        return self._fetch("googleanalytics4",
+            ["account_id", "sessions", "purchase_revenue", "transactions", "add_to_carts", "totalusers"],
+            date_from, date_to, account_id, use_server_filter=False)
+
+    def get_ga4_channels(self, account_id: str, date_from: str, date_to: str) -> list:
+        if not account_id:
+            return []
+        return self._fetch("googleanalytics4",
+            ["account_id", "session_default_channel_group", "purchase_revenue", "transactions"],
+            date_from, date_to, account_id, use_server_filter=False)
+
+    def get_ga4_daily(self, account_id: str, date_from: str, date_to: str) -> list:
+        if not account_id:
+            return []
+        return self._fetch("googleanalytics4",
+            ["account_id", "date", "purchase_revenue", "sessions"],
+            date_from, date_to, account_id, use_server_filter=False)
 
 
 def parse_meta_rows(rows: list) -> dict:
-    """ממיר שורות Meta ל-dict קמפיין → נתונים (תואם מבנה report.py הקיים)"""
+    """ממיר שורות Meta ל-dict קמפיין -> נתונים מעובדים"""
     campaigns = {}
     for row in rows:
         name = row.get("campaign", "Unknown")
         spend = float(row.get("spend") or 0)
-        revenue = float(row.get("revenue") or 0)
-        conv = float(row.get("conversions") or 0)
-        clicks = int(float(row.get("clicks") or 0))
-        impressions = int(float(row.get("impressions") or 0))
-        ctr = float(row.get("ctr") or 0)
+        revenue = float(row.get("action_values_omni_purchase") or 0)
+        purch = float(row.get("actions_omni_purchase") or 0)
 
         if name not in campaigns:
             campaigns[name] = {
-                "campaign_name": name,
-                "ad_name": name,
-                "ad_id": name,
-                "adset_name": "",
-                "spend": 0, "impressions": 0, "clicks": 0,
-                "purchases": 0, "purchase_value": 0,
-                "ctr": 0, "frequency": 1.0, "roas": 0, "cpa": None,
+                "campaign_name": name, "spend": 0, "purchase_value": 0, "purchases": 0,
             }
         campaigns[name]["spend"] += spend
         campaigns[name]["purchase_value"] += revenue
-        campaigns[name]["purchases"] += conv
-        campaigns[name]["clicks"] += clicks
-        campaigns[name]["impressions"] += impressions
-        campaigns[name]["ctr"] = ctr
+        campaigns[name]["purchases"] += purch
 
-    # חישוב ROAS ו-CPA
     for c in campaigns.values():
         c["roas"] = (c["purchase_value"] / c["spend"]) if c["spend"] > 0 else 0
         c["cpa"] = (c["spend"] / c["purchases"]) if c["purchases"] > 0 else None
@@ -114,7 +103,6 @@ def parse_meta_rows(rows: list) -> dict:
 
 
 def parse_google_rows(rows: list) -> dict:
-    """מסכם נתוני Google Ads לפי קמפיין"""
     campaigns = {}
     for row in rows:
         name = row.get("campaign", "Unknown")
@@ -134,24 +122,24 @@ def parse_google_rows(rows: list) -> dict:
     return campaigns
 
 
-def parse_ga4_rows(rows: list) -> dict:
-    """מסכם נתוני GA4 לפי ערוץ"""
+def parse_ga4_total(rows: list) -> dict:
+    total = {"revenue": 0, "transactions": 0, "sessions": 0, "atc": 0}
+    for row in rows:
+        total["revenue"] += float(row.get("purchase_revenue") or 0)
+        total["transactions"] += float(row.get("transactions") or 0)
+        total["sessions"] += float(row.get("sessions") or 0)
+        total["atc"] += float(row.get("add_to_carts") or 0)
+    return {"total": total}
+
+
+def parse_ga4_channels(rows: list) -> dict:
     channels = {}
-    total = {"revenue": 0, "transactions": 0, "sessions": 0}
     for row in rows:
         ch = row.get("session_default_channel_group", "Other")
         rev = float(row.get("purchase_revenue") or 0)
         trans = float(row.get("transactions") or 0)
-        sess = float(row.get("sessions") or 0)
-
         if ch not in channels:
-            channels[ch] = {"revenue": 0, "transactions": 0, "sessions": 0}
+            channels[ch] = {"revenue": 0, "transactions": 0}
         channels[ch]["revenue"] += rev
         channels[ch]["transactions"] += trans
-        channels[ch]["sessions"] += sess
-
-        total["revenue"] += rev
-        total["transactions"] += trans
-        total["sessions"] += sess
-
-    return {"channels": channels, "total": total}
+    return {"channels": channels}
