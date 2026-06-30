@@ -1,0 +1,40 @@
+name: Weekly Reports with Insights
+
+on:
+  schedule:
+    - cron: '0 5 * * 0'  # כל יום ראשון ב-08:00 שעון ישראל
+  workflow_dispatch:
+
+jobs:
+  build-and-send:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install requests
+      - name: Generate reports and send emails
+        env:
+          WINDSOR_API_KEY: ${{ secrets.WINDSOR_API_KEY }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          EMAIL_TO_CRAZY: ${{ secrets.EMAIL_TO_CRAZY }}
+          EMAIL_TO_PRETTY: ${{ secrets.EMAIL_TO_PRETTY }}
+          EMAIL_TO_ANNABELLA: ${{ secrets.EMAIL_TO_ANNABELLA }}
+          EMAIL_TO_FINE: ${{ secrets.EMAIL_TO_FINE }}
+          EMAIL_TO_LASTER: ${{ secrets.EMAIL_TO_LASTER }}
+          EMAIL_TO_ARISTO: ${{ secrets.EMAIL_TO_ARISTO }}
+        run: python main.py --days 7
+      - name: Commit updated report files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          cp reports_output/*.html .
+          git add *_report.html
+          git diff --staged --quiet || git commit -m "🔄 עדכון דוחות שבועיים אוטומטי"
+          git push
