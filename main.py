@@ -16,6 +16,7 @@ from windsor_api import (
     parse_ga4_total, parse_ga4_channels
 )
 from html_report_builder import build_full_report
+from agency_overview_builder import build_agency_overview
 
 
 # ===== הגדרות חזותיות לכל לקוח =====
@@ -119,7 +120,11 @@ def process_client(client_key: str, windsor: WindsorClient, days: int):
     return html, {
         "ga4_revenue": ga4_data["total"]["revenue"],
         "meta_spend": sum(c["spend"] for c in meta_curr.values()),
+        "meta_roas": (sum(c["purchase_value"] for c in meta_curr.values()) /
+                      sum(c["spend"] for c in meta_curr.values())) if sum(c["spend"] for c in meta_curr.values()) > 0 else 0,
         "google_spend": sum(c["spend"] for c in google_data.values()) if google_data else 0,
+        "google_roas": (sum(c["value"] for c in google_data.values()) /
+                        sum(c["spend"] for c in google_data.values())) if google_data and sum(c["spend"] for c in google_data.values()) > 0 else 0,
     }
 
 
@@ -136,6 +141,11 @@ def main():
 
     os.makedirs("reports_output", exist_ok=True)
 
+    agency_summary = {}
+    today = date.today()
+    current_until = today - timedelta(days=1)
+    current_since = current_until - timedelta(days=args.days - 1)
+
     for client_key in clients:
         try:
             html, summary = process_client(client_key, windsor, args.days)
@@ -147,6 +157,17 @@ def main():
             print(f"✅ [{client_key}] דוח נשמר: {out_path}")
             print(f"   GA4: {summary['ga4_revenue']:,.0f}₪ | Meta: {summary['meta_spend']:,.0f}₪ | Google: {summary['google_spend']:,.0f}₪")
 
+            # איסוף נתונים לדשבורד הסוכנות
+            cfg = CLIENT_BRANDS[client_key]
+            agency_summary[client_key] = {
+                "name": cfg["name"], "color": cfg["color"],
+                "ga4_revenue": summary["ga4_revenue"],
+                "meta_spend": summary["meta_spend"],
+                "meta_roas": summary.get("meta_roas", 0),
+                "google_spend": summary["google_spend"],
+                "google_roas": summary.get("google_roas", 0),
+            }
+
             # שליחת מייל (אם מוגדר)
             email_env_key = f"EMAIL_TO_{client_key.upper()}"
             if os.environ.get("GMAIL_USER") and os.environ.get(email_env_key):
@@ -156,6 +177,21 @@ def main():
         except Exception as e:
             print(f"❌ [{client_key}] שגיאה: {e}")
             continue
+
+    # בניית דשבורד הסוכנות (index.html) — אוטומטית, ללא בקשה
+    if agency_summary:
+        try:
+            prev_until = current_since - timedelta(days=1)
+            prev_since = prev_until - timedelta(days=args.days - 1)
+            overview_html = build_agency_overview(
+                agency_summary,
+                date_range=(fmt_display(current_since), fmt_display(current_until)),
+            )
+            with open("reports_output/index.html", "w", encoding="utf-8") as f:
+                f.write(overview_html)
+            print(f"✅ [agency] דשבורד סוכנות עודכן: reports_output/index.html")
+        except Exception as e:
+            print(f"❌ [agency overview] שגיאה: {e}")
 
     print("\n✅ הרצה הושלמה")
 
