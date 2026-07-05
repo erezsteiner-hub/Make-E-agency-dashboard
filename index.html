@@ -5,98 +5,45 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Agency Performance Dashboard</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&display=swap');
   :root {
-    --bg: #f5f7fb; --surface: #ffffff; --surface2: #f0f3f9; --border: #e4e9f2; --border2: #d4dbe8;
-    --text: #1e2640; --text2: #4a5578; --muted: #8a93ad;
-    --primary: #5b6ef5; --primary-light: #eef0fe;
-    --green: #10b981; --green-bg: #ecfdf5; --yellow: #f59e0b; --yellow-bg: #fffbeb; --red: #ef4444; --red-bg: #fef2f2;
-    --shadow-sm: 0 1px 3px rgba(30,38,64,.06); --shadow: 0 2px 8px rgba(30,38,64,.08); --shadow-lg: 0 8px 24px rgba(30,38,64,.12);
-    --radius: 14px; --radius-sm: 10px; --font: 'Heebo', system-ui, sans-serif;
-    --meta: #0866ff; --google: #ea4335; --ga4: #e8710a;
-    --brand: #7c3aed; --nonbrand: #06b6d4;
-    --cl-crazy: #f97316; --cl-pretty: #ec4899; --cl-annabella: #10b981; --cl-fine: #8b5cf6; --cl-laster: #0ea5e9;
+    --bg:#f5f7fb; --surface:#fff; --surface2:#f0f3f9; --border:#e4e9f2;
+    --text:#1e2640; --text2:#4a5578; --muted:#8a93ad;
+    --primary:#5b6ef5; --green:#10b981; --green-bg:#ecfdf5;
+    --yellow:#f59e0b; --yellow-bg:#fffbeb; --red:#ef4444; --red-bg:#fef2f2;
+    --radius:14px; --font:'Heebo',system-ui,sans-serif;
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; min-height: 100vh; line-height: 1.5; }
-  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 32px; display: flex; align-items: center; justify-content: space-between; height: 64px; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow-sm); }
-  .brand { display: flex; align-items: center; gap: 13px; }
-  .logo { width: 38px; height: 38px; background: linear-gradient(135deg, var(--primary), #7c8ef9); border-radius: 11px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; color: #fff; box-shadow: 0 4px 12px rgba(91,110,245,.3); }
-  .brand h1 { font-size: 16px; font-weight: 800; letter-spacing: -.3px; }
-  .brand-sub { font-size: 11.5px; color: var(--muted); font-weight: 500; }
-  .header-right { display: flex; align-items: center; gap: 12px; }
-  .date-filter { display: flex; align-items: center; gap: 7px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 7px 12px; }
-  .date-filter select, .date-filter input { border: none; background: transparent; font-size: 12.5px; color: var(--text); font-family: var(--font); font-weight: 600; cursor: pointer; outline: none; }
-  .date-custom { display: none; align-items: center; gap: 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 5px 10px; }
-  .date-custom input { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 4px 7px; font-size: 11.5px; }
-  .date-custom button { background: var(--primary); color: #fff; border: none; border-radius: 6px; padding: 5px 12px; font-size: 11.5px; cursor: pointer; font-family: var(--font); font-weight: 600; }
-  .live { display: flex; align-items: center; gap: 6px; background: var(--green-bg); padding: 6px 11px; border-radius: 20px; }
-  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
-  .live span { font-size: 11px; color: var(--green); font-weight: 700; }
-  .nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 32px; display: flex; gap: 2px; overflow-x: auto; }
-  .nav::-webkit-scrollbar { height: 0; }
-  .nav-tab { padding: 13px 17px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; border-bottom: 2.5px solid transparent; white-space: nowrap; transition: all .15s; display: flex; align-items: center; gap: 7px; }
-  .nav-tab:hover { color: var(--text2); background: var(--surface2); }
-  .nav-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
-  .nav-dot { width: 9px; height: 9px; border-radius: 50%; }
-  .content { padding: 26px 32px; max-width: 1440px; margin: 0 auto; }
-  .panel { display: none; animation: fade .3s ease; }
-  .panel.active { display: block; }
-  @keyframes fade { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
-  .sec-label { font-size: 12px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: .6px; margin: 26px 0 14px; display:flex; align-items:center; gap:8px; }
-  .sec-label:first-child { margin-top: 0; }
-  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 13px; }
-  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow-sm); position: relative; overflow: hidden; }
-  .kpi::before { content:''; position:absolute; top:0; right:0; width:3px; height:100%; background:var(--primary); opacity:.7; }
-  .kpi.k-green::before { background: var(--green); } .kpi.k-meta::before { background: var(--meta); } .kpi.k-google::before { background: var(--google); }
-  .kpi.k-brand::before { background: var(--brand); } .kpi.k-nonbrand::before { background: var(--nonbrand); }
-  .kpi-label { font-size: 11px; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
-  .kpi-val { font-size: 24px; font-weight: 800; letter-spacing: -.6px; line-height: 1; }
-  .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 6px; font-weight: 500; }
-  .chip { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 5px; margin-top: 6px; }
-  .c-green { background: var(--green-bg); color: var(--green); } .c-yellow { background: var(--yellow-bg); color: var(--yellow); } .c-red { background: var(--red-bg); color: var(--red); }
-  .clients { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 14px; }
-  .client { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 19px; box-shadow: var(--shadow-sm); cursor: pointer; transition: all .2s; border-top: 3px solid var(--primary); }
-  .client:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
-  .client-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
-  .client-name { font-size: 15px; font-weight: 800; }
-  .roas-pill { font-size: 12px; font-weight: 800; padding: 4px 11px; border-radius: 20px; }
-  .pf-rows { display: flex; flex-direction: column; gap: 9px; }
-  .pf-row { display: flex; align-items: center; gap: 10px; }
-  .pf-tag { width: 58px; font-size: 11px; font-weight: 700; flex-shrink: 0; }
-  .pf-bar { flex: 1; height: 16px; background: var(--surface2); border-radius: 5px; overflow: hidden; }
-  .pf-fill { height: 100%; border-radius: 5px; }
-  .pf-val { width: 92px; font-size: 11px; font-weight: 700; text-align: left; flex-shrink: 0; }
-  .table-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-sm); }
-  .table-scroll { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; min-width: 640px; }
-  th { background: var(--surface2); padding: 11px 14px; font-size: 11px; color: var(--text2); font-weight: 700; text-align: right; border-bottom: 1px solid var(--border); white-space: nowrap; }
-  td { padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 500; }
-  tr:last-child td { border-bottom: none; }
-  tbody tr:hover td { background: var(--surface2); }
-  .num { font-variant-numeric: tabular-nums; font-weight: 600; }
-  .tag-platform { display: inline-block; padding: 3px 9px; border-radius: 6px; font-size: 11px; font-weight: 700; }
-  .tag-meta { background: #0866ff18; color: var(--meta); } .tag-google { background: #ea433518; color: var(--google); }
-  .tag-brand { background: #7c3aed18; color: var(--brand); } .tag-nonbrand { background: #06b6d418; color: var(--nonbrand); }
-  .alert { border-radius: var(--radius-sm); padding: 12px 15px; font-size: 13px; line-height: 1.5; margin-bottom: 10px; display: flex; gap: 10px; align-items: flex-start; }
-  .a-red { background: var(--red-bg); border: 1px solid #fecaca; color: #991b1b; }
-  .a-yellow { background: var(--yellow-bg); border: 1px solid #fde68a; color: #92400e; }
-  .a-green { background: var(--green-bg); border: 1px solid #a7f3d0; color: #065f46; }
-  .a-blue { background: var(--primary-light); border: 1px solid #c7d2fe; color: #3730a3; }
-  .channel-bars { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow-sm); }
-  .ch-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-  .ch-row:last-child { margin-bottom: 0; }
-  .ch-name { width: 120px; font-size: 12px; font-weight: 600; flex-shrink: 0; }
-  .ch-track { flex: 1; height: 20px; background: var(--surface2); border-radius: 6px; overflow: hidden; }
-  .ch-fill { height: 100%; border-radius: 6px; display: flex; align-items: center; padding-right: 8px; }
-  .ch-val { width: 100px; font-size: 11.5px; font-weight: 700; text-align: left; flex-shrink: 0; }
-  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 13px; }
-  .leg { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--text2); }
-  .leg-dot { width: 11px; height: 11px; border-radius: 3px; }
-  .note { background: var(--primary-light); border: 1px solid #c7d2fe; border-radius: var(--radius-sm); padding: 11px 14px; font-size: 12px; color: #3730a3; margin-bottom: 16px; display: flex; align-items: flex-start; gap: 8px; font-weight: 500; }
-  .footer { text-align: center; padding: 24px; font-size: 11.5px; color: var(--muted); border-top: 1px solid var(--border); margin-top: 36px; font-weight: 500; }
-  @media (max-width: 640px) { .content, .header, .nav { padding-left: 16px; padding-right: 16px; } .kpi-grid { grid-template-columns: repeat(2, 1fr); } .clients { grid-template-columns: 1fr; } .brand-sub { display: none; } }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); font-family:var(--font); font-size:14px; }
+  .header { background:var(--surface); border-bottom:1px solid var(--border); padding:14px 28px;
+    display:flex; align-items:center; justify-content:space-between; }
+  .brand { display:flex; align-items:center; gap:12px; }
+  .logo { width:38px; height:38px; background:linear-gradient(135deg,var(--primary),#7c8ef9);
+    border-radius:11px; display:flex; align-items:center; justify-content:center; font-weight:800; color:#fff; }
+  .brand h1 { font-size:16px; font-weight:800; }
+  .brand-sub { font-size:11.5px; color:var(--muted); }
+  .live { display:flex; align-items:center; gap:6px; background:var(--green-bg); padding:6px 11px; border-radius:20px; }
+  .live-dot { width:7px; height:7px; border-radius:50%; background:var(--green); }
+  .live span { font-size:11px; color:var(--green); font-weight:700; }
+  .content { padding:24px 28px; max-width:1400px; margin:0 auto; }
+  .banner { background:#eef0fe; border:1px solid #c7d2fe; border-radius:10px; padding:10px 14px;
+    font-size:12px; color:#3730a3; margin-bottom:16px; font-weight:500; }
+  .clients { display:grid; grid-template-columns:repeat(auto-fit,minmax(290px,1fr)); gap:14px; }
+  .client { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:19px; box-shadow:0 1px 3px rgba(0,0,0,.05); border-top:3px solid var(--primary); }
+  .client-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:15px; }
+  .client-name { font-size:15px; font-weight:800; }
+  .roas-pill { font-size:12px; font-weight:800; padding:4px 11px; border-radius:20px; }
+  .c-green { background:var(--green-bg); color:var(--green); }
+  .c-yellow { background:var(--yellow-bg); color:var(--yellow); }
+  .c-red { background:var(--red-bg); color:var(--red); }
+  .pf-rows { display:flex; flex-direction:column; gap:9px; }
+  .pf-row { display:flex; align-items:center; gap:10px; }
+  .pf-tag { width:58px; font-size:11px; font-weight:700; flex-shrink:0; }
+  .pf-bar { flex:1; height:16px; background:var(--surface2); border-radius:5px; overflow:hidden; }
+  .pf-fill { height:100%; border-radius:5px; }
+  .pf-val { width:104px; font-size:11px; font-weight:700; text-align:left; flex-shrink:0; }
+  .footer { text-align:center; padding:24px; font-size:11.5px; color:var(--muted); }
 </style>
 </head>
 <body>
@@ -105,321 +52,82 @@
     <div class="logo">AP</div>
     <div><h1>Agency Performance</h1><div class="brand-sub">Meta · Google Ads · GA4 · 5 לקוחות</div></div>
   </div>
-  <div class="header-right">
-    <div class="date-filter">
-      <span style="font-size:13px">📅</span>
-      <select id="dateSel" onchange="changeDates()">
-        <option value="7">7 ימים</option><option value="14">14 ימים</option>
-        <option value="30" selected>30 ימים אחרונים</option><option value="90">90 ימים</option>
-        <option value="custom">בחירה ידנית</option>
-      </select>
-    </div>
-    <div class="date-custom" id="dateCustom">
-      <input type="date" id="dFrom"><span style="font-size:11px;color:var(--muted)">—</span><input type="date" id="dTo">
-      <button onclick="applyCustom()">החל</button>
-    </div>
-    <div class="live"><div class="live-dot"></div><span>LIVE</span></div>
-  </div>
-</div>
-<div class="nav">
-  <div class="nav-tab active" onclick="show('overview',this)"><span>📊</span> סקירה</div>
-  <div class="nav-tab" onclick="show('crazy',this)"><span class="nav-dot" style="background:var(--cl-crazy)"></span> Crazy Line</div>
-  <div class="nav-tab" onclick="show('pretty',this)"><span class="nav-dot" style="background:var(--cl-pretty)"></span> Pretty Ballerinas</div>
-  <div class="nav-tab" onclick="show('annabella',this)"><span class="nav-dot" style="background:var(--cl-annabella)"></span> Annabella</div>
-  <div class="nav-tab" onclick="show('fine',this)"><span class="nav-dot" style="background:var(--cl-fine)"></span> Fine Rituals</div>
-  <div class="nav-tab" onclick="show('laster',this)"><span class="nav-dot" style="background:var(--cl-laster)"></span> Laster</div>
+  <div class="live"><div class="live-dot"></div><span>מעודכן שבועית</span></div>
 </div>
 <div class="content">
-<div class="note" id="dateNote">💡 <span><strong>חלוקת קמפיינים Brand / Non-Brand</strong> · הכנסות לפי פלטפורמה מ-GA4 (מקור אמת) · נתוני 30 הימים האחרונים</span></div>
-
-<!-- OVERVIEW -->
-<div class="panel active" id="p-overview">
-  <div class="sec-label">👥 ביצועים לפי לקוח — בחר לקוח לפירוט מלא</div>
-  <div class="clients" id="clientCards"></div>
+  <div class="banner">💡 נתוני 28/06/2026 – 04/07/2026 · עדכון אוטומטי כל יום ראשון · לנתונים חיים בזמן אמת, היכנס לדשבורד הלקוח הספציפי</div>
+  <div class="clients"><div class="client" style="border-top-color:#EC0E8D">
+          <div class="client-top">
+            <div class="client-name" style="color:#EC0E8D">Crazy Line</div>
+            <span class="roas-pill c-green">ROAS 11.6x</span>
+          </div>
+          <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px">הכנסות GA4 (אתר)</div>
+          <div style="font-size:20px;font-weight:800;margin-bottom:14px;color:#EC0E8D">₪279,634</div>
+          <div class="pf-rows">
+            <div class="pf-row"><div class="pf-tag" style="color:#0866ff">Meta</div>
+              <div class="pf-bar"><div class="pf-fill" style="width:100.0%;background:#0866ff"></div></div>
+              <div class="pf-val">₪18,613 · 13.9x</div></div>
+            <div class="pf-row"><div class="pf-tag" style="color:#ea4335">Google</div>
+              <div class="pf-bar"><div class="pf-fill" style="width:29.25055283703718%;background:#ea4335"></div></div>
+              <div class="pf-val">₪5,444 · 15.5x</div></div>
+          </div></div><div class="client" style="border-top-color:#1a1a1a">
+          <div class="client-top">
+            <div class="client-name" style="color:#1a1a1a">Pretty Ballerinas</div>
+            <span class="roas-pill c-green">ROAS 4.1x</span>
+          </div>
+          <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px">הכנסות GA4 (אתר)</div>
+          <div style="font-size:20px;font-weight:800;margin-bottom:14px;color:#1a1a1a">₪16,044</div>
+          <div class="pf-rows">
+            <div class="pf-row"><div class="pf-tag" style="color:#0866ff">Meta</div>
+              <div class="pf-bar"><div class="pf-fill" style="width:100.0%;background:#0866ff"></div></div>
+              <div class="pf-val">₪3,347 · 5.5x</div></div>
+            <div class="pf-row"><div class="pf-tag" style="color:#ea4335">Google</div>
+              <div class="pf-bar"><div class="pf-fill" style="width:16.165223029278103%;background:#ea4335"></div></div>
+              <div class="pf-val">₪541 · 2.5x</div></div>
+          </div></div><div class="client" style="border-top-color:#3d2b1f">
+          <div class="client-top">
+            <div class="client-name" style="color:#3d2b1f">Fine Rituals</div>
+            <span class="roas-pill c-yellow">ROAS 2.7x</span>
+          </div>
+          <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px">הכנסות GA4 (אתר)</div>
+          <div style="font-size:20px;font-weight:800;margin-bottom:14px;color:#3d2b1f">₪4,730</div>
+          <div class="pf-rows">
+            <div class="pf-row"><div class="pf-tag" style="color:#0866ff">Meta</div>
+              <div class="pf-bar"><div class="pf-fill" style="width:100.0%;background:#0866ff"></div></div>
+              <div class="pf-val">₪1,533 · 3.3x</div></div>
+            <div class="pf-row"><div class="pf-tag" style="color:#ea4335">Google</div>
+              <div class="pf-bar"><div class="pf-fill" style="width:13.024008452853819%;background:#ea4335"></div></div>
+              <div class="pf-val">₪200 · 2.2x</div></div>
+          </div></div><div class="client" style="border-top-color:#1c1c1c">
+          <div class="client-top">
+            <div class="client-name" style="color:#1c1c1c">Laster</div>
+            <span class="roas-pill c-yellow">ROAS 3.5x</span>
+          </div>
+          <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px">הכנסות GA4 (אתר)</div>
+          <div style="font-size:20px;font-weight:800;margin-bottom:14px;color:#1c1c1c">₪7,428</div>
+          <div class="pf-rows">
+            <div class="pf-row"><div class="pf-tag" style="color:#0866ff">Meta</div>
+              <div class="pf-bar"><div class="pf-fill" style="width:100.0%;background:#0866ff"></div></div>
+              <div class="pf-val">₪2,140 · 1.9x</div></div>
+            <div class="pf-row"><div class="pf-tag" style="color:#ea4335">Google</div>
+              <div class="pf-bar"><div class="pf-fill" style="width:0.0%;background:#ea4335"></div></div>
+              <div class="pf-val">—</div></div>
+          </div></div><div class="client" style="border-top-color:#0d9488">
+          <div class="client-top">
+            <div class="client-name" style="color:#0d9488">Aristo Shmat</div>
+            <span class="roas-pill c-green">ROAS 5.9x</span>
+          </div>
+          <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px">הכנסות GA4 (אתר)</div>
+          <div style="font-size:20px;font-weight:800;margin-bottom:14px;color:#0d9488">₪76,043</div>
+          <div class="pf-rows">
+            <div class="pf-row"><div class="pf-tag" style="color:#0866ff">Meta</div>
+              <div class="pf-bar"><div class="pf-fill" style="width:100.0%;background:#0866ff"></div></div>
+              <div class="pf-val">₪10,716 · 5.1x</div></div>
+            <div class="pf-row"><div class="pf-tag" style="color:#ea4335">Google</div>
+              <div class="pf-bar"><div class="pf-fill" style="width:20.605354191687457%;background:#ea4335"></div></div>
+              <div class="pf-val">₪2,208 · 6.9x</div></div>
+          </div></div></div>
 </div>
-
-<!-- Client panels injected by JS -->
-<div class="panel" id="p-crazy"></div>
-<div class="panel" id="p-pretty"></div>
-<div class="panel" id="p-annabella"></div>
-<div class="panel" id="p-fine"></div>
-<div class="panel" id="p-laster"></div>
-
-</div>
-<div class="footer">Agency Performance · Meta (Porter) + Google Ads & GA4 (Windsor) · <span id="upd"></span></div>
-
-<script>
-// ============ DATA ============
-const DATA = {
-  crazy: {
-    name:'Crazy Line', color:'#f97316',
-    meta: {spend:78821, value:850792, roas:10.79},
-    google: {brand:{spend:2711,value:331820,roas:122.4}, nonbrand:{spend:29439,value:340457,roas:11.6}, total_spend:32150, total_value:672277, roas:20.9},
-    ga4: {'חיפוש בתשלום':322497,'סושיאל בתשלום':274290,'SMS':194951,'אימייל':133382,'ישיר':87999,'חיפוש אורגני':74384,'Cross-network':58291,'שופינג בתשלום':2772,'אחר':63000},
-    ga4_total: 1211566,
-    google_campaigns: [
-      {name:'Brand Campaign', type:'brand', spend:2097, conv:980, value:329263, roas:157},
-      {name:'Lucci Brand Campaign', type:'brand', spend:614, conv:11, value:2557, roas:4.2},
-      {name:'pmax-items-over-99', type:'nonbrand', spend:11238, conv:572, value:188055, roas:16.7},
-      {name:'paid-google-pmax-categories', type:'nonbrand', spend:9002, conv:212, value:65644, roas:7.3},
-      {name:'pmax-items-to-99-v2', type:'nonbrand', spend:3484, conv:188, value:53782, roas:15.4},
-      {name:'paid_google_demand_gen_v2', type:'nonbrand', spend:1315, conv:97, value:29701, roas:22.6},
-      {name:'shopping-pmax-excluded', type:'nonbrand', spend:1298, conv:14, value:3066, roas:2.4},
-      {name:'yt-video-views-ai-video', type:'nonbrand', spend:3101, conv:10, value:209, roas:0.07},
-    ],
-    meta_campaigns: [
-      {name:'sales_dynamic_caru', spend:8747, value:88780, roas:10.15, purch:322},
-      {name:'sales_influencers_v3', spend:10200, value:100368, roas:9.84, purch:254},
-      {name:'basic_sales_campaign', spend:7210, value:75629, roas:10.49, purch:271},
-      {name:'abandoned_cart', spend:6006, value:77952, roas:12.98, purch:257},
-      {name:'sales_dress_v3', spend:5987, value:79262, roas:13.24, purch:224},
-      {name:'lucci_sales_v3_s26', spend:5899, value:79454, roas:13.47, purch:205},
-      {name:'sales_s26_campaign', spend:5138, value:64380, roas:12.53, purch:209},
-      {name:'sales_to_99_items', spend:4190, value:49060, roas:11.71, purch:190},
-      {name:'Test_6mo_no-purchasers', spend:3357, value:51769, roas:15.42, purch:165},
-      {name:'lp-views-ai-video-june26', spend:3899, value:858, roas:0.22, purch:4},
-      {name:'sales_advantage (paused)', spend:4762, value:39953, roas:8.39, purch:133},
-      {name:'sales_OffLine (paused)', spend:4562, value:33619, roas:7.37, purch:117},
-    ],
-    alerts: [
-      {type:'green', html:'<strong>🏆 Meta חזק מאוד:</strong> ROAS משוקלל 10.8x על ₪78.8K הוצאה, 2,701 רכישות. abandoned_cart (13x), dress_v3 (13.2x) ו-lucci (13.5x) מובילים.'},
-      {type:'green', html:'<strong>Brand Campaign ב-Google מטורף:</strong> ROAS 157x — ביקוש מותג חזק. Non-Brand (P-Max) נושא גיוס ב-11.6x.'},
-      {type:'red', html:'<strong>2 קמפיינים מבזבזים:</strong> lp-views-ai-video ב-Meta (₪3,899 ב-0.22x) + yt-video-views ב-Google (₪3,101 ב-0.07x). יחד ₪7,000 על וידאו ללא החזר.'},
-    ],
-  },
-  pretty: {
-    name:'Pretty Ballerinas', color:'#ec4899',
-    meta: {spend:6907, value:57258, roas:8.29},
-    google: {brand:{spend:0,value:0,roas:0}, nonbrand:{spend:1031,value:9993,roas:9.7}, total_spend:1031, total_value:9993, roas:9.7},
-    ga4: {'חיפוש אורגני':35617,'ישיר':22038,'סושיאל בתשלום':18364,'Unassigned':7868,'הפניות':5257,'Cross-network':4627,'Push':2698},
-    ga4_total: 96468,
-    google_campaigns: [
-      {name:'רק מוצרים', type:'nonbrand', spend:894, conv:12, value:9993, roas:11.2},
-      {name:'pretty ballerinas p max', type:'nonbrand', spend:136, conv:0, value:0, roas:0},
-    ],
-    meta_campaigns: [
-      {name:'spring collection 2026', spend:3526, value:26055, roas:7.39, purch:26},
-      {name:'summer sale 30% off', spend:1855, value:20675, roas:11.15, purch:24},
-      {name:'DPA new collection 2/2026', spend:806, value:7030, roas:8.73, purch:9},
-      {name:'30% DPA summer sale', spend:468, value:3498, roas:7.47, purch:5},
-      {name:'פוסט Instagram summer', spend:150, value:0, roas:0, purch:0},
-      {name:'פוסט Instagram SALE', spend:102, value:0, roas:0, purch:0},
-    ],
-    alerts: [
-      {type:'green', html:'<strong>🏆 הכי יעיל בסוכנות:</strong> Meta 8.3x ו-Google 9.7x. summer sale ב-11x מוביל. הזדמנות ברורה להגדלת תקציב.'},
-      {type:'blue', html:'<strong>אין קמפיין Brand:</strong> שקול הוספת Brand Campaign ב-Google לתפיסת ביקוש קיים בזול.'},
-    ],
-  },
-  annabella: {
-    name:'Annabella', color:'#10b981',
-    meta: {spend:6474, value:25990, roas:4.01},
-    google: {brand:{spend:2311,value:41360,roas:17.9}, nonbrand:{spend:3962,value:11605,roas:2.93}, total_spend:6273, total_value:52965, roas:8.44},
-    ga4: {'חיפוש בתשלום':51048,'חיפוש אורגני':19066,'ישיר':16937,'סושיאל אורגני':14868,'Unassigned':7457,'סושיאל בתשלום':6013,'שופינג אורגני':559},
-    ga4_total: 115948,
-    google_campaigns: [
-      {name:'Search Brand Auto', type:'brand', spend:2311, conv:82, value:41360, roas:17.9},
-      {name:'search_adterms', type:'nonbrand', spend:3962, conv:16, value:11605, roas:2.93},
-    ],
-    meta_campaigns: [
-      {name:'UGC - MAY26', spend:3230, value:13132, roas:4.07, purch:75},
-      {name:'May_June_offers', spend:2891, value:12859, roas:4.45, purch:73},
-      {name:'birthdate_traffic', spend:353, value:0, roas:0, purch:0},
-    ],
-    alerts: [
-      {type:'green', html:'<strong>🏆 Brand Search מצוין:</strong> ROAS 17.9x. המותג חזק וזול לתפיסה.'},
-      {type:'yellow', html:'<strong>Non-Brand חלש:</strong> search_adterms ב-2.93x בלבד עם ₪3,962 הוצאה. בדוק keywords ושלילות.'},
-      {type:'red', html:'<strong>Meta נחות מ-Google:</strong> 4.0x מול 8.4x. שקול הסטת תקציב או אופטימיזציה. birthdate_traffic מבזבז ₪353 ללא המרות.'},
-    ],
-  },
-  fine: {
-    name:'Fine Rituals', color:'#8b5cf6',
-    meta: {spend:9390, value:35708, roas:3.80},
-    google: {brand:{spend:0,value:0,roas:0}, nonbrand:{spend:597,value:5421,roas:9.08}, total_spend:597, total_value:5421, roas:9.08},
-    ga4: {'סושיאל בתשלום':21903,'חיפוש אורגני':3946,'אימייל':3717,'Cross-network':2483,'ישיר':1480,'סושיאל אורגני':1066,'אחר':1939},
-    ga4_total: 36534,
-    google_campaigns: [
-      {name:'fine rituals p-max', type:'nonbrand', spend:356, conv:9, value:3401, roas:9.6},
-      {name:'products only', type:'nonbrand', spend:241, conv:9, value:2020, roas:8.4},
-    ],
-    meta_campaigns: [
-      {name:'main sales campaign', spend:2414, value:5252, roas:2.18, purch:12},
-      {name:'New DPA', spend:1988, value:6802, roas:3.42, purch:17},
-      {name:'69% pride weekend', spend:1748, value:18385, roas:10.52, purch:75},
-      {name:'skin care sales', spend:1167, value:1032, roas:0.88, purch:3},
-      {name:'weekend sale 50+30', spend:1101, value:3363, roas:3.05, purch:8},
-      {name:'ATC_ 60 DAYS', spend:520, value:0, roas:0, purch:0},
-      {name:'500-200 sales', spend:294, value:326, roas:1.11, purch:1},
-    ],
-    alerts: [
-      {type:'green', html:'<strong>🏆 69% pride weekend:</strong> ROAS 10.5x — הקמפיין הכי חזק ב-Meta. שקול הגדלת תקציב.'},
-      {type:'red', html:'<strong>קמפיינים מפסידים:</strong> skin care (0.88x) + ATC_60 (0x) + 500-200 (1.1x) = ₪1,981 הוצאה בזבזנית. לעצור מיד.'},
-      {type:'blue', html:'<strong>Google מנוצל חסר:</strong> ROAS 9.1x על ₪597 בלבד — יש מקום ברור להגדלה משמעותית.'},
-    ],
-  },
-  laster: {
-    name:'Laster', color:'#0ea5e9',
-    meta: {spend:5879, value:21822, roas:3.71},
-    google: {brand:{spend:0,value:0,roas:0}, nonbrand:{spend:0,value:0,roas:0}, total_spend:0, total_value:0, roas:0},
-    ga4: {'סושיאל בתשלום':13265,'חיפוש אורגני':10088,'הפניות':2800,'ישיר':2027,'אימייל':874,'סושיאל אורגני':846,'Unassigned':551},
-    ga4_total: 30450,
-    google_campaigns: [],
-    meta_campaigns: [
-      {name:'spring edition - Copy', spend:3615, value:11329, roas:3.13, purch:42},
-      {name:'DPA sales 18/1', spend:2264, value:10492, roas:4.63, purch:34},
-    ],
-    alerts: [
-      {type:'blue', html:'<strong>חסר Google Ads לגמרי:</strong> Laster רץ רק על Meta. הוספת Google Shopping + Brand Campaign יכולה לתפוס ביקוש קיים — כמו שעובד מצוין אצל שאר הלקוחות.'},
-      {type:'yellow', html:'<strong>DPA חזק יותר:</strong> DPA sales 4.6x מול spring 3.1x. שקול הסטת תקציב ל-DPA.'},
-    ],
-  },
-};
-
-const ORDER = ['crazy','pretty','annabella','fine','laster'];
-const fmt = n => '₪' + Math.round(n).toLocaleString('he-IL');
-const fmtK = n => n>=1000 ? '₪'+(n/1000).toFixed(1)+'K' : '₪'+Math.round(n);
-const roasClass = r => r>=4 ? 'c-green' : r>=2 ? 'c-yellow' : 'c-red';
-
-// ===== CLIENT CARDS =====
-function renderCards() {
-  document.getElementById('clientCards').innerHTML = ORDER.map((id,i) => {
-    const d = DATA[id];
-    const totalSpend = d.meta.spend + d.google.total_spend;
-    const blendedRoas = totalSpend>0 ? (d.ga4_total/totalSpend).toFixed(1) : '—';
-    const metaMax = Math.max(d.meta.spend, d.google.total_spend, 1);
-    return `<div class="client" style="border-top-color:${d.color}" onclick="show('${id}', document.querySelectorAll('.nav-tab')[${i+1}])">
-      <div class="client-top">
-        <div class="client-name" style="color:${d.color}">${d.name}</div>
-        <span class="roas-pill ${roasClass(blendedRoas)}">ROAS ${blendedRoas}x</span>
-      </div>
-      <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px">הכנסות GA4 (אתר)</div>
-      <div style="font-size:20px;font-weight:800;margin-bottom:14px;color:${d.color}">${fmt(d.ga4_total)}</div>
-      <div class="pf-rows">
-        <div class="pf-row"><div class="pf-tag" style="color:var(--meta)">Meta</div>
-          <div class="pf-bar"><div class="pf-fill" style="width:${d.meta.spend/metaMax*100}%;background:var(--meta)"></div></div>
-          <div class="pf-val">${d.meta.spend>0?fmtK(d.meta.spend)+' · '+d.meta.roas+'x':'—'}</div></div>
-        <div class="pf-row"><div class="pf-tag" style="color:var(--google)">Google</div>
-          <div class="pf-bar"><div class="pf-fill" style="width:${d.google.total_spend/metaMax*100}%;background:var(--google)"></div></div>
-          <div class="pf-val">${d.google.total_spend>0?fmtK(d.google.total_spend)+' · '+d.google.roas+'x':'—'}</div></div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-// ===== CLIENT PANEL =====
-function renderPanel(id) {
-  const d = DATA[id];
-  const totalSpend = d.meta.spend + d.google.total_spend;
-  const blendedRoas = totalSpend>0 ? (d.ga4_total/totalSpend).toFixed(1) : '—';
-
-  // KPIs
-  let kpis = `
-    <div class="kpi k-green"><div class="kpi-label">הכנסות GA4 (אתר)</div><div class="kpi-val" style="color:var(--green)">${fmt(d.ga4_total)}</div><div class="kpi-sub">מקור אמת</div></div>
-    <div class="kpi"><div class="kpi-label">סך הוצאות פרסום</div><div class="kpi-val">${fmt(totalSpend)}</div><div class="kpi-sub">Meta + Google</div></div>
-    <div class="kpi k-green"><div class="kpi-label">ROAS משולב</div><div class="kpi-val" style="color:${blendedRoas>=4?'var(--green)':'var(--yellow)'}">${blendedRoas}x</div></div>`;
-  if(d.meta.spend>0) kpis += `<div class="kpi k-meta"><div class="kpi-label">Meta · ROAS</div><div class="kpi-val" style="color:var(--meta)">${d.meta.roas}x</div><div class="kpi-sub">${fmt(d.meta.spend)} הוצאה</div></div>`;
-  else kpis += `<div class="kpi k-meta"><div class="kpi-label">Meta</div><div class="kpi-val" style="color:var(--muted);font-size:15px">MCP נפרד</div></div>`;
-  if(d.google.total_spend>0) kpis += `<div class="kpi k-google"><div class="kpi-label">Google · ROAS</div><div class="kpi-val" style="color:var(--google)">${d.google.roas}x</div><div class="kpi-sub">${fmt(d.google.total_spend)} הוצאה</div></div>`;
-  else kpis += `<div class="kpi k-google"><div class="kpi-label">Google Ads</div><div class="kpi-val" style="color:var(--muted);font-size:15px">לא פעיל</div></div>`;
-
-  // Brand / Non-Brand split (Google)
-  let brandSection = '';
-  if(d.google.total_spend>0) {
-    const gb = d.google.brand, gn = d.google.nonbrand;
-    brandSection = `<div class="sec-label">🏷️ Google Ads — חלוקת Brand / Non-Brand</div>
-      <div class="kpi-grid" style="grid-template-columns:repeat(2,1fr);max-width:560px">
-        <div class="kpi k-brand"><div class="kpi-label">🟣 Brand</div><div class="kpi-val" style="color:var(--brand)">${gb.spend>0?gb.roas+'x':'—'}</div>
-          <div class="kpi-sub">${gb.spend>0?fmt(gb.spend)+' → '+fmt(gb.value):'אין קמפיין Brand'}</div></div>
-        <div class="kpi k-nonbrand"><div class="kpi-label">🔵 Non-Brand</div><div class="kpi-val" style="color:var(--nonbrand)">${gn.roas}x</div>
-          <div class="kpi-sub">${fmt(gn.spend)} → ${fmt(gn.value)}</div></div>
-      </div>`;
-  }
-
-  // GA4 revenue by channel
-  const chMax = Math.max(...Object.values(d.ga4));
-  const chColors = {'חיפוש בתשלום':'#ea4335','סושיאל בתשלום':'#0866ff','שופינג בתשלום':'#34a853','חיפוש אורגני':'#10b981','סושיאל אורגני':'#8b5cf6','שופינג אורגני':'#059669','ישיר':'#6b7280','אימייל':'#f59e0b','SMS':'#ec4899','הפניות':'#06b6d4','Cross-network':'#a78bfa','Unassigned':'#cbd5e1','Push':'#f472b6','אחר':'#94a3b8'};
-  let chBars = Object.entries(d.ga4).sort((a,b)=>b[1]-a[1]).map(([ch,rev])=>{
-    const c = chColors[ch]||'#94a3b8';
-    return `<div class="ch-row"><div class="ch-name">${ch}</div>
-      <div class="ch-track"><div class="ch-fill" style="width:${rev/chMax*100}%;background:${c}"></div></div>
-      <div class="ch-val">${fmt(rev)}</div></div>`;
-  }).join('');
-
-  // Google campaigns table
-  let googleTable = '';
-  if(d.google_campaigns.length>0) {
-    googleTable = `<div class="sec-label">📋 קמפייני Google Ads</div>
-      <div class="table-card"><div class="table-scroll"><table>
-        <thead><tr><th>קמפיין</th><th>סוג</th><th>הוצאות</th><th>המרות</th><th>ערך המרה</th><th>ROAS</th></tr></thead>
-        <tbody>${d.google_campaigns.map(c=>`<tr>
-          <td>${c.name}</td>
-          <td><span class="tag-platform tag-${c.type}">${c.type==='brand'?'Brand':'Non-Brand'}</span></td>
-          <td class="num">${fmt(c.spend)}</td><td class="num">${Math.round(c.conv)}</td>
-          <td class="num">${fmt(c.value)}</td><td><span class="chip ${roasClass(c.roas)}">${c.roas}x</span></td>
-        </tr>`).join('')}</tbody>
-      </table></div></div>`;
-  }
-
-  // Meta campaigns table
-  let metaTable = '';
-  if(d.meta_campaigns.length>0) {
-    metaTable = `<div class="sec-label">📋 קמפייני Meta</div>
-      <div class="table-card"><div class="table-scroll"><table>
-        <thead><tr><th>קמפיין</th><th>הוצאות</th><th>ערך רכישה</th><th>ROAS</th><th>רכישות</th></tr></thead>
-        <tbody>${d.meta_campaigns.map(c=>`<tr>
-          <td>${c.name}</td><td class="num">${fmt(c.spend)}</td><td class="num">${fmt(c.value)}</td>
-          <td><span class="chip ${roasClass(c.roas)}">${c.roas}x</span></td><td class="num">${c.purch}</td>
-        </tr>`).join('')}</tbody>
-      </table></div></div>`;
-  } else if(id==='crazy_OLD_REMOVED') {
-    metaTable = '';
-  }
-
-  // Alerts
-  let alerts = d.alerts.map(a=>`<div class="alert a-${a.type}">${a.type==='red'?'⚠️':a.type==='green'?'🏆':a.type==='yellow'?'📊':'💡'} <div>${a.html}</div></div>`).join('');
-
-  document.getElementById('p-'+id).innerHTML = `
-    <div class="sec-label" style="color:${d.color}">● ${d.name} — ביצועים מפורטים</div>
-    <div class="kpi-grid">${kpis}</div>
-    ${brandSection}
-    <div class="sec-label">💰 הכנסות לפי פלטפורמה / ערוץ (GA4)</div>
-    <div class="channel-bars">${chBars}</div>
-    ${googleTable}
-    ${metaTable}
-    <div class="sec-label">🚨 תובנות והמלצות</div>
-    ${alerts}`;
-}
-
-function show(id, el) {
-  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  if(el) el.classList.add('active');
-  document.getElementById('p-'+id).classList.add('active');
-  window.scrollTo({top:0,behavior:'smooth'});
-}
-
-function changeDates() {
-  const v = document.getElementById('dateSel').value;
-  const dc = document.getElementById('dateCustom');
-  if(v==='custom'){ dc.style.display='flex';
-    const t=new Date(), f=new Date(); f.setDate(f.getDate()-30);
-    document.getElementById('dTo').value=t.toISOString().split('T')[0];
-    document.getElementById('dFrom').value=f.toISOString().split('T')[0];
-  } else { dc.style.display='none';
-    const lbl={'7':'7 הימים','14':'14 הימים','30':'30 הימים','90':'90 הימים'};
-    document.getElementById('dateNote').querySelector('span').innerHTML=`<strong>חלוקת קמפיינים Brand / Non-Brand</strong> · הכנסות לפי פלטפורמה מ-GA4 · נתוני ${lbl[v]} האחרונים · ⚠️ לרענון נתונים לטווח זה בקש ממני לשאוב מחדש`;
-  }
-}
-function applyCustom() {
-  const f=document.getElementById('dFrom').value, t=document.getElementById('dTo').value;
-  if(!f||!t) return;
-  const ff=new Date(f).toLocaleDateString('he-IL'), tt=new Date(t).toLocaleDateString('he-IL');
-  document.getElementById('dateNote').querySelector('span').innerHTML=`<strong>טווח נבחר: ${ff} — ${tt}</strong> · ⚠️ הנתונים המוצגים הם ל-30 הימים האחרונים. לרענון לטווח זה בקש ממני לשאוב מחדש מ-Windsor/Porter.`;
-}
-
-// INIT
-renderCards();
-ORDER.forEach(renderPanel);
-document.getElementById('upd').textContent = new Date().toLocaleDateString('he-IL');
-</script>
+<div class="footer">Agency Performance · עדכון אוטומטי שבועי · Meta + Google Ads + GA4 דרך Windsor</div>
 </body>
 </html>
