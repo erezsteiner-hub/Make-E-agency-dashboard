@@ -40,7 +40,9 @@ def roas_class(r):
 
 def build_full_report(client_config: dict, current: dict, previous: dict,
                        google_data: dict, ga4_data: dict, ga4_channels: dict,
-                       ga4_daily: list, date_range: tuple, prev_date_range: tuple) -> str:
+                       ga4_daily: list, date_range: tuple, prev_date_range: tuple,
+                       top_products: list = None, top_campaigns: list = None,
+                       is_monthly: bool = False, new_vs_returning: dict = None) -> str:
     """
     בונה דוח HTML מלא ומעוצב — KPIs, גרפים, Brand/Non-Brand, תובנות, השוואה.
     client_config: {"name", "color", "color2", "font", "font_url", "bg", "surface2", "border", "text", "text2", "muted", "logo"}
@@ -65,10 +67,12 @@ def build_full_report(client_config: dict, current: dict, previous: dict,
     ga4_transactions = ga4_total.get("transactions", 0)
     ga4_sessions = ga4_total.get("sessions", 0)
     ga4_atc = ga4_total.get("atc", 0)
+    ga4_checkouts = ga4_total.get("checkouts", 0)
 
     all_spend = total_spend + google_spend
     blended_roas = (ga4_revenue / all_spend) if all_spend > 0 else 0
     cr = (ga4_transactions / ga4_sessions * 100) if ga4_sessions > 0 else 0
+    aov = (ga4_revenue / ga4_transactions) if ga4_transactions > 0 else 0
 
     # ===== תובנות + השוואה (אוטומטי) =====
     insights = generate_insights(current, previous, google_data, None, ga4_data, None)
@@ -134,6 +138,31 @@ def build_full_report(client_config: dict, current: dict, previous: dict,
           <thead><tr><th>קמפיין</th><th>סוג</th><th>הוצאה</th><th>ROAS</th></tr></thead>
           <tbody>{g_rows}</tbody></table></div></div>'''
 
+    # ===== דוח חדש 1: Best Seller (טופ מוצרים) =====
+    products_section = ""
+    if top_products:
+        p_rows = ""
+        for i, p in enumerate(top_products, 1):
+            p_rows += f'''<tr><td class="num" style="color:var(--muted)">{i}</td><td>{p["name"]}</td>
+              <td class="num">{fmt(p["revenue"])}</td><td class="num">{p["qty"]:.0f}</td></tr>'''
+        products_section = f'''<div class="sec">🛍️ מוצרים מובילים (Best Seller)</div>
+        <div class="tbl-card"><div class="tbl-scroll"><table>
+          <thead><tr><th>#</th><th>מוצר</th><th>הכנסה</th><th>יחידות</th></tr></thead>
+          <tbody>{p_rows}</tbody></table></div></div>'''
+
+    # ===== דוח חדש 2: טופ קמפיינים לפי GA4 =====
+    ga_campaigns_section = ""
+    if top_campaigns:
+        c_rows = ""
+        for i, c in enumerate(top_campaigns, 1):
+            c_rows += f'''<tr><td class="num" style="color:var(--muted)">{i}</td><td>{c["name"]}</td>
+              <td class="num">{fmt(c["revenue"])}</td><td class="num">{c["transactions"]:.0f}</td>
+              <td class="num">{c["sessions"]:,.0f}</td></tr>'''
+        ga_campaigns_section = f'''<div class="sec">🎯 קמפיינים מובילים (GA4)</div>
+        <div class="tbl-card"><div class="tbl-scroll"><table>
+          <thead><tr><th>#</th><th>קמפיין</th><th>הכנסה</th><th>עסקאות</th><th>סשנים</th></tr></thead>
+          <tbody>{c_rows}</tbody></table></div></div>'''
+
     # ===== סיכום תקופה (אוטומטי, מבוסס תבנית) =====
     summary_text = (
         f"בתקופה {date_range[0]}–{date_range[1]} הושקעו <strong>{fmt(all_spend)}</strong> "
@@ -142,6 +171,48 @@ def build_full_report(client_config: dict, current: dict, previous: dict,
         f"ב-Meta, ROAS עמד על {meta_roas:.1f}x. "
         + (f"ב-Google, ROAS עמד על {google_roas:.1f}x." if google_spend > 0 else "")
     )
+
+    # ===== משפך המרה (GA4) =====
+    funnel_html = ""
+    if ga4_sessions > 0:
+        atc_pct = (ga4_atc / ga4_sessions * 100) if ga4_sessions > 0 else 0
+        checkout_pct = (ga4_checkouts / ga4_sessions * 100) if ga4_sessions > 0 else 0
+        atc_width = min(atc_pct * 2, 90)
+        checkout_width = min(checkout_pct * 2, 75)
+        cr_width = min(cr * 2, 55)
+        checkout_row = ""
+        if ga4_checkouts > 0:
+            checkout_row = f'''<div class="fn-row"><div class="fn-bar" style="background:#f59e0b;width:{checkout_width:.0f}%">מעבר ל-Checkout · {ga4_checkouts:,.0f}</div><div class="fn-meta">{checkout_pct:.1f}% מהסשנים</div></div>'''
+        funnel_html = f'''<div class="sec">🔻 משפך המרה (GA4)</div>
+        <div class="card">
+          <div class="funnel">
+            <div class="fn-row"><div class="fn-bar" style="background:var(--client);width:100%">סשנים · {ga4_sessions:,.0f}</div></div>
+            <div class="fn-row"><div class="fn-bar" style="background:var(--client2);width:{atc_width:.0f}%">הוספות לעגלה · {ga4_atc:,.0f}</div><div class="fn-meta">{atc_pct:.1f}% מהסשנים</div></div>
+            {checkout_row}
+            <div class="fn-row"><div class="fn-bar" style="background:#10b981;width:{cr_width:.0f}%">רכישות · {ga4_transactions:,.0f}</div><div class="fn-meta">{cr:.2f}% שיעור המרה</div></div>
+          </div>
+        </div>'''
+
+    # ===== לקוחות חדשים מול חוזרים =====
+    new_returning_html = ""
+    if new_vs_returning:
+        nd = new_vs_returning["new"]
+        rd = new_vs_returning["returning"]
+        total_sess = nd["sessions"] + rd["sessions"]
+        if total_sess > 0:
+            new_pct = nd["sessions"] / total_sess * 100
+            ret_pct = rd["sessions"] / total_sess * 100
+            n_aov = (nd["revenue"] / nd["transactions"]) if nd["transactions"] > 0 else 0
+            r_aov = (rd["revenue"] / rd["transactions"]) if rd["transactions"] > 0 else 0
+            new_returning_html = f'''<div class="sec">👥 לקוחות חדשים מול חוזרים</div>
+            <div class="bn-grid">
+              <div class="bn-card bn-brand"><div class="bn-tag">🆕 חדשים ({new_pct:.0f}%)</div>
+                <div class="bn-roas">{fmt(nd["revenue"])}</div>
+                <div class="bn-detail">{nd["transactions"]:,.0f} עסקאות · {fmt(n_aov)} ממוצע להזמנה</div></div>
+              <div class="bn-card bn-nonbrand"><div class="bn-tag">🔁 חוזרים ({ret_pct:.0f}%)</div>
+                <div class="bn-roas">{fmt(rd["revenue"])}</div>
+                <div class="bn-detail">{rd["transactions"]:,.0f} עסקאות · {fmt(r_aov)} ממוצע להזמנה</div></div>
+            </div>'''
 
     # ===== כרטיסי השוואה =====
     def comp_card(label, curr_fmt, prev_fmt, change):
@@ -191,6 +262,11 @@ def build_full_report(client_config: dict, current: dict, previous: dict,
   .hero {{ background:linear-gradient(135deg,var(--client),var(--client2)); padding:32px; color:#fff; position:relative; overflow:hidden; }}
   .hero-top {{ display:flex; align-items:center; gap:16px; margin-bottom:24px; position:relative; z-index:2; }}
   .hero-logo {{ width:54px; height:54px; background:rgba(255,255,255,.2); border:2px solid rgba(255,255,255,.4); border-radius:14px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:20px; }}
+  .brand-logo {{ height:104px; max-width:400px; object-fit:contain; filter:drop-shadow(0 2px 6px rgba(0,0,0,.25)); }}
+  .hero-period {{ font-size:13px; opacity:.85; }}
+  .footer-agency {{ display:flex; align-items:center; justify-content:center; gap:10px; margin-top:14px; padding-top:14px; border-top:1px solid var(--border); }}
+  .footer-agency span {{ font-size:12px; color:var(--muted); font-weight:600; }}
+  .agency-logo {{ height:34px; object-fit:contain; }}
   .hero h1 {{ font-size:24px; font-weight:800; letter-spacing:-.5px; }}
   .hero-sub {{ font-size:13px; opacity:.9; margin-top:2px; }}
   .hero-stats {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; }}
@@ -214,6 +290,11 @@ def build_full_report(client_config: dict, current: dict, previous: dict,
   .bn-roas {{ font-size:30px; font-weight:800; }}
   .bn-brand .bn-roas {{ color:var(--brand); }} .bn-nonbrand .bn-roas {{ color:var(--nonbrand); }}
   .bn-detail {{ font-size:12px; color:var(--muted); margin-top:6px; font-weight:600; }}
+  .funnel {{ display:flex; flex-direction:column; gap:10px; }}
+  .fn-row {{ display:flex; align-items:center; gap:14px; }}
+  .fn-bar {{ height:44px; border-radius:10px; display:flex; align-items:center; padding:0 18px; color:#fff;
+    font-weight:700; font-size:14px; min-width:120px; }}
+  .fn-meta {{ font-size:12px; color:var(--text2); font-weight:600; }}
   .ch-row {{ display:flex; align-items:center; gap:12px; margin-bottom:12px; }}
   .ch-name {{ width:115px; font-size:12px; font-weight:600; flex-shrink:0; }}
   .ch-track {{ flex:1; height:20px; background:var(--surface2); border-radius:6px; overflow:hidden; }}
@@ -240,14 +321,15 @@ def build_full_report(client_config: dict, current: dict, previous: dict,
 <body>
 <div class="hero">
   <div class="hero-top">
-    <div class="hero-logo">{client_config.get("initials", "")}</div>
-    <div><h1>{name}</h1><div class="hero-sub">דוח ביצועים שבועי · Meta · Google Ads · GA4 · {date_range[0]} – {date_range[1]}</div></div>
+    <img class="brand-logo" style="{client_config.get("logo_style_override", "")}" src="{client_config.get("logo_data_uri", "")}" alt="{name}">
+    <div class="hero-period">{"סיכום חודשי" if is_monthly else "דוח ביצועים שבועי"} · Meta · Google Ads · GA4 · {date_range[0]} – {date_range[1]}</div>
   </div>
   <div class="hero-stats">
     <div class="hs"><div class="hs-label">הכנסות מהאתר (GA4)</div><div class="hs-val">{fmt(ga4_revenue)}</div><div class="hs-sub">{ga4_transactions:.0f} עסקאות</div></div>
     <div class="hs"><div class="hs-label">סך הוצאות פרסום</div><div class="hs-val">{fmt(all_spend)}</div><div class="hs-sub">Meta + Google</div></div>
     <div class="hs"><div class="hs-label">ROAS משולב</div><div class="hs-val">{blended_roas:.1f}x</div><div class="hs-sub">הכנסות ÷ הוצאות</div></div>
     <div class="hs"><div class="hs-label">סשנים</div><div class="hs-val">{ga4_sessions/1000:.1f}K</div><div class="hs-sub">{cr:.2f}% המרה</div></div>
+    <div class="hs"><div class="hs-label">שווי הזמנה ממוצע (AOV)</div><div class="hs-val">{fmt(aov)}</div><div class="hs-sub">הכנסות ÷ עסקאות</div></div>
   </div>
 </div>
 
@@ -255,7 +337,7 @@ def build_full_report(client_config: dict, current: dict, previous: dict,
   <div class="sec">📝 סיכום תקופה</div>
   <div class="card" style="margin-bottom:20px;line-height:1.8">{summary_text}</div>
 
-  <div class="sec">📊 השוואה לתקופה קודמת ({prev_date_range[0]}–{prev_date_range[1]})</div>
+  <div class="sec">📊 השוואה {"לחודש הקודם" if is_monthly else "לשבוע התואם בחודש הקודם"} ({prev_date_range[0]}–{prev_date_range[1]})</div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px">{compare_html}</div>
 
   <div class="sec">📈 מגמת ביצועים יומית</div>
@@ -263,8 +345,16 @@ def build_full_report(client_config: dict, current: dict, previous: dict,
 
   {bn_html}
 
+  {funnel_html}
+
+  {new_returning_html}
+
   <div class="sec">💰 הכנסות לפי ערוץ (GA4)</div>
   <div class="card">{ch_html}</div>
+
+  {products_section}
+
+  {ga_campaigns_section}
 
   <div class="sec">📋 קמפייני Meta מובילים</div>
   <div class="tbl-card"><div class="tbl-scroll"><table>
@@ -277,7 +367,10 @@ def build_full_report(client_config: dict, current: dict, previous: dict,
   {insights_html}
 </div>
 
-<div class="footer">{name} · דוח אוטומטי שבועי · Meta + Google Ads + GA4 דרך Windsor</div>
+<div class="footer">
+  <div>{name} · {"סיכום חודשי אוטומטי" if is_monthly else "דוח אוטומטי שבועי"} · Meta + Google Ads + GA4 דרך Windsor</div>
+  <div class="footer-agency"><span>מופעל על ידי</span><img class="agency-logo" src="{client_config.get("agency_logo_data_uri", "")}" alt="MAKE-E"></div>
+</div>
 
 <script>
 new Chart(document.getElementById('trendChart'), {{

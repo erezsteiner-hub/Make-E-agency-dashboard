@@ -9,58 +9,107 @@ main.py — מנצח האוטומציה השבועית
 import argparse
 import os
 import json
+import calendar
 from datetime import date, timedelta
 
 from windsor_api import (
     WindsorClient, parse_meta_rows, parse_google_rows,
-    parse_ga4_total, parse_ga4_channels
+    parse_ga4_total, parse_ga4_channels, parse_ga4_products, parse_ga4_campaigns, parse_ga4_new_vs_returning
 )
 from html_report_builder import build_full_report
 from agency_overview_builder import build_agency_overview
+from brand_assets import CLIENT_LOGOS, AGENCY_LOGO
+
+
+def compute_date_windows(days=7):
+    """
+    מחשב את חלונות הזמן לדוח.
+    רגיל: שבוע נוכחי (7 ימים שהסתיימו אתמול) מול אותם תאריכים חודש קודם.
+    סוף חודש: אם הריצה היא ביום ראשון האחרון של החודש → סיכום חודשי מלא
+              (החודש הנוכחי מול החודש הקודם).
+    מחזיר: (current_until, current_since, prev_until, prev_since, is_monthly)
+    """
+    today = date.today()
+
+    # בדיקה אם זה הדוח האחרון של החודש:
+    # ריצה שבועית היא ביום ראשון. אם בתוך 7 הימים הבאים מתחלף החודש → זה הראשון האחרון בחודש.
+    next_week = today + timedelta(days=7)
+    is_last_sunday_of_month = (next_week.month != today.month)
+
+    if is_last_sunday_of_month:
+        # סיכום חודשי: כל החודש הנוכחי מול החודש הקודם
+        first_of_this_month = today.replace(day=1)
+        last_day_this = calendar.monthrange(today.year, today.month)[1]
+        current_since = first_of_this_month
+        current_until = today.replace(day=last_day_this)
+
+        # חודש קודם
+        prev_month_last = first_of_this_month - timedelta(days=1)
+        prev_since = prev_month_last.replace(day=1)
+        prev_until = prev_month_last
+        return current_until, current_since, prev_until, prev_since, True
+
+    # שבועי רגיל: 7 ימים שהסתיימו אתמול
+    current_until = today - timedelta(days=1)
+    current_since = current_until - timedelta(days=days - 1)
+
+    # השוואה: אותם תאריכים בדיוק חודש קודם
+    prev_until = shift_month_back(current_until)
+    prev_since = shift_month_back(current_since)
+    return current_until, current_since, prev_until, prev_since, False
+
+
+def shift_month_back(d):
+    """מחזיר את אותו יום בחודש הקודם (עם טיפול בחודשים קצרים)"""
+    month = d.month - 1 or 12
+    year = d.year if d.month > 1 else d.year - 1
+    last_day = calendar.monthrange(year, month)[1]
+    day = min(d.day, last_day)
+    return date(year, month, day)
 
 
 # ===== הגדרות חזותיות לכל לקוח =====
 CLIENT_BRANDS = {
     "crazy": {
-        "name": "Crazy Line", "initials": "CL", "color": "#EC0E8D", "color2": "#f43fa8",
+        "name": "Crazy Line", "initials": "CL", "color": "#000000", "color2": "#2d2d2d",
         "font": "Rubik", "font_url": "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800;900&display=swap",
-        "bg": "#fdf5f9", "surface2": "#fce8f3", "border": "#f0d0e4",
-        "text": "#1a0d14", "text2": "#5a2d47", "muted": "#a07090",
+        "bg": "#f7f7f7", "surface2": "#ececec", "border": "#e2e2e2",
+        "text": "#111111", "text2": "#333333", "muted": "#777777",
         "meta_account": "2562301110668961", "google_account": "654-753-2446", "ga4_account": "454540408",
     },
     "pretty": {
-        "name": "Pretty Ballerinas", "initials": "PB", "color": "#1a1a1a", "color2": "#2d2d2d",
+        "name": "Pretty Ballerinas", "initials": "PB", "color": "#EC0E8D", "color2": "#f43fa8",
         "font": "Heebo", "font_url": "https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&display=swap",
-        "bg": "#fdf9f5", "surface2": "#f5ede4", "border": "#e8d9c8",
-        "text": "#1a0f0a", "text2": "#5a3d2b", "muted": "#a08070",
+        "bg": "#fdf5f9", "surface2": "#fce8f3", "border": "#f0d0e4",
+        "text": "#1a0d14", "text2": "#5a2d47", "muted": "#a07090",
         "meta_account": "708681422636732", "google_account": "477-626-3831", "ga4_account": "152370243",
     },
     "annabella": {
-        "name": "Annabella", "initials": "AN", "color": "#2d5a8e", "color2": "#3a70b0",
+        "name": "Annabella", "initials": "AN", "color": "#EC0E8D", "color2": "#f43fa8",
         "font": "Heebo", "font_url": "https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&display=swap",
-        "bg": "#f4f7fb", "surface2": "#e8f0f8", "border": "#ccdaec",
-        "text": "#0d1f35", "text2": "#2a4a70", "muted": "#7090b0",
+        "bg": "#fdf5f9", "surface2": "#fce8f3", "border": "#f0d0e4",
+        "text": "#1a0d14", "text2": "#5a2d47", "muted": "#a07090",
         "meta_account": "1247794652730158", "google_account": "490-285-3125", "ga4_account": "354304809",
     },
     "fine": {
-        "name": "Fine Rituals", "initials": "FR", "color": "#3d2b1f", "color2": "#5c4030",
+        "name": "Fine Rituals", "initials": "FR", "color": "#000000", "color2": "#2d2d2d",
         "font": "Heebo", "font_url": "https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&display=swap",
-        "bg": "#faf7f4", "surface2": "#f0e8df", "border": "#ddd0c4",
-        "text": "#1a0f08", "text2": "#5a3d28", "muted": "#9a7d68",
+        "bg": "#f7f7f7", "surface2": "#ececec", "border": "#e2e2e2",
+        "text": "#111111", "text2": "#333333", "muted": "#777777",
         "meta_account": "918073650786458", "google_account": "700-518-0619", "ga4_account": "518599842",
     },
     "laster": {
-        "name": "Laster", "initials": "LS", "color": "#1c1c1c", "color2": "#333333",
+        "name": "Laster", "initials": "LS", "color": "#000000", "color2": "#2d2d2d",
         "font": "Heebo", "font_url": "https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&display=swap",
-        "bg": "#f8f7f5", "surface2": "#f0ece4", "border": "#e0d8cc",
-        "text": "#1a1a1a", "text2": "#4a4030", "muted": "#9a9080",
+        "bg": "#f7f7f7", "surface2": "#ececec", "border": "#e2e2e2",
+        "text": "#111111", "text2": "#333333", "muted": "#777777",
         "meta_account": "369761200875429", "google_account": "", "ga4_account": "315864239",
     },
     "aristo": {
-        "name": "Aristo Shmat", "initials": "AS", "color": "#0d9488", "color2": "#14b8a6",
+        "name": "Aristo Shmat", "initials": "AS", "color": "#000000", "color2": "#2d2d2d",
         "font": "Heebo", "font_url": "https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&display=swap",
-        "bg": "#f3faf9", "surface2": "#e6f5f3", "border": "#c4e8e3",
-        "text": "#0a201d", "text2": "#1d4d47", "muted": "#6ba39c",
+        "bg": "#f7f7f7", "surface2": "#ececec", "border": "#e2e2e2",
+        "text": "#111111", "text2": "#333333", "muted": "#777777",
         "meta_account": "265005426163824", "google_account": "377-969-5637", "ga4_account": "401528124",
     },
 }
@@ -72,16 +121,20 @@ def fmt_display(d):
 
 def process_client(client_key: str, windsor: WindsorClient, days: int):
     """מעבד לקוח אחד: שואב, בונה דוח, מחזיר HTML"""
-    cfg = CLIENT_BRANDS[client_key]
-    today = date.today()
-    current_until = today - timedelta(days=1)
-    current_since = current_until - timedelta(days=days - 1)
-    prev_until = current_since - timedelta(days=1)
-    prev_since = prev_until - timedelta(days=days - 1)
-
+    cfg = dict(CLIENT_BRANDS[client_key])
+    cfg["logo_data_uri"] = CLIENT_LOGOS.get(client_key, "")
+    cfg["agency_logo_data_uri"] = AGENCY_LOGO
+    cfg["logo_style_override"] = "max-width:600px;height:60px;" if client_key == "fine" else ""
     fmt_iso = lambda d: d.strftime("%Y-%m-%d")
 
-    print(f"[{cfg['name']}] שולף נתונים: {fmt_iso(current_since)} - {fmt_iso(current_until)}")
+    # ── חישוב חלון הזמן ──
+    # ברירת מחדל: שבוע נוכחי (7 ימים שהסתיימו אתמול)
+    # השוואה: אותם תאריכים בדיוק חודש קודם
+    current_until, current_since, prev_until, prev_since, is_monthly = compute_date_windows(days)
+
+    label = "סיכום חודשי" if is_monthly else "דוח שבועי"
+    print(f"[{cfg['name']}] {label}: {fmt_iso(current_since)} - {fmt_iso(current_until)} "
+          f"(השוואה: {fmt_iso(prev_since)} - {fmt_iso(prev_until)})")
 
     # Meta — תקופה נוכחית וקודמת
     raw_meta_curr = windsor.get_meta_campaign_data(cfg["meta_account"], fmt_iso(current_since), fmt_iso(current_until))
@@ -104,6 +157,17 @@ def process_client(client_key: str, windsor: WindsorClient, days: int):
 
     raw_ga4_daily = windsor.get_ga4_daily(cfg["ga4_account"], fmt_iso(current_since), fmt_iso(current_until))
 
+    # דוחות חדשים: Best Seller + טופ קמפיינים GA4
+    raw_ga4_products = windsor.get_ga4_products(cfg["ga4_account"], fmt_iso(current_since), fmt_iso(current_until))
+    top_products = parse_ga4_products(raw_ga4_products)
+
+    raw_ga4_campaigns = windsor.get_ga4_campaigns(cfg["ga4_account"], fmt_iso(current_since), fmt_iso(current_until))
+    top_campaigns = parse_ga4_campaigns(raw_ga4_campaigns)
+
+    # דוח חדש: לקוחות חדשים מול חוזרים
+    raw_ga4_new_returning = windsor.get_ga4_new_vs_returning(cfg["ga4_account"], fmt_iso(current_since), fmt_iso(current_until))
+    new_vs_returning = parse_ga4_new_vs_returning(raw_ga4_new_returning)
+
     # בניית הדוח
     html = build_full_report(
         client_config=cfg,
@@ -115,6 +179,10 @@ def process_client(client_key: str, windsor: WindsorClient, days: int):
         ga4_daily=raw_ga4_daily,
         date_range=(fmt_display(current_since), fmt_display(current_until)),
         prev_date_range=(fmt_display(prev_since), fmt_display(prev_until)),
+        top_products=top_products,
+        top_campaigns=top_campaigns,
+        is_monthly=is_monthly,
+        new_vs_returning=new_vs_returning,
     )
 
     return html, {

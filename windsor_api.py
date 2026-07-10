@@ -60,7 +60,7 @@ class WindsorClient:
         if not account_id:
             return []
         return self._fetch("googleanalytics4",
-            ["account_id", "sessions", "purchase_revenue", "transactions", "add_to_carts", "totalusers"],
+            ["account_id", "sessions", "purchase_revenue", "transactions", "add_to_carts", "checkouts", "totalusers"],
             date_from, date_to, account_id, use_server_filter=False)
 
     def get_ga4_channels(self, account_id: str, date_from: str, date_to: str) -> list:
@@ -75,6 +75,30 @@ class WindsorClient:
             return []
         return self._fetch("googleanalytics4",
             ["account_id", "date", "purchase_revenue", "sessions"],
+            date_from, date_to, account_id, use_server_filter=False)
+
+    def get_ga4_products(self, account_id: str, date_from: str, date_to: str) -> list:
+        """דוח Best Seller — טופ מוצרים נמכרים"""
+        if not account_id:
+            return []
+        return self._fetch("googleanalytics4",
+            ["account_id", "item_name", "item_revenue", "items_purchased"],
+            date_from, date_to, account_id, use_server_filter=False)
+
+    def get_ga4_campaigns(self, account_id: str, date_from: str, date_to: str) -> list:
+        """דוח טופ קמפיינים לפי GA4"""
+        if not account_id:
+            return []
+        return self._fetch("googleanalytics4",
+            ["account_id", "campaign_name", "purchase_revenue", "transactions", "sessions"],
+            date_from, date_to, account_id, use_server_filter=False)
+
+    def get_ga4_new_vs_returning(self, account_id: str, date_from: str, date_to: str) -> list:
+        """לקוחות חדשים מול חוזרים"""
+        if not account_id:
+            return []
+        return self._fetch("googleanalytics4",
+            ["account_id", "new_vs_returning", "sessions", "totalusers", "purchase_revenue", "transactions"],
             date_from, date_to, account_id, use_server_filter=False)
 
 
@@ -123,12 +147,13 @@ def parse_google_rows(rows: list) -> dict:
 
 
 def parse_ga4_total(rows: list) -> dict:
-    total = {"revenue": 0, "transactions": 0, "sessions": 0, "atc": 0}
+    total = {"revenue": 0, "transactions": 0, "sessions": 0, "atc": 0, "checkouts": 0}
     for row in rows:
         total["revenue"] += float(row.get("purchase_revenue") or 0)
         total["transactions"] += float(row.get("transactions") or 0)
         total["sessions"] += float(row.get("sessions") or 0)
         total["atc"] += float(row.get("add_to_carts") or 0)
+        total["checkouts"] += float(row.get("checkouts") or 0)
     return {"total": total}
 
 
@@ -143,3 +168,66 @@ def parse_ga4_channels(rows: list) -> dict:
         channels[ch]["revenue"] += rev
         channels[ch]["transactions"] += trans
     return {"channels": channels}
+
+
+def parse_ga4_products(rows: list, top_n: int = 10) -> list:
+    """טופ מוצרים לפי הכנסה (Best Seller)"""
+    products = {}
+    for row in rows:
+        name = row.get("item_name")
+        if not name or name == "(not set)":
+            continue
+        rev = float(row.get("item_revenue") or 0)
+        qty = float(row.get("items_purchased") or 0)
+        if name not in products:
+            products[name] = {"name": name, "revenue": 0, "qty": 0}
+        products[name]["revenue"] += rev
+        products[name]["qty"] += qty
+    ranked = sorted([p for p in products.values() if p["revenue"] > 0],
+                    key=lambda x: -x["revenue"])[:top_n]
+    return ranked
+
+
+# ערכים טכניים שאינם קמפיינים אמיתיים
+_EXCLUDE_CAMPAIGNS = {"(not set)", "(organic)", "(direct)", "(referral)",
+                      "(cross-network)", "(ai-assistant)", "(other)", "direct", "",
+                      "{{campaign.name}}"}
+
+
+def parse_ga4_campaigns(rows: list, top_n: int = 10) -> list:
+    """טופ קמפיינים לפי הכנסה ב-GA4"""
+    campaigns = {}
+    for row in rows:
+        name = row.get("campaign_name")
+        if not name or name in _EXCLUDE_CAMPAIGNS:
+            continue
+        rev = float(row.get("purchase_revenue") or 0)
+        trans = float(row.get("transactions") or 0)
+        sess = float(row.get("sessions") or 0)
+        if name not in campaigns:
+            campaigns[name] = {"name": name, "revenue": 0, "transactions": 0, "sessions": 0}
+        campaigns[name]["revenue"] += rev
+        campaigns[name]["transactions"] += trans
+        campaigns[name]["sessions"] += sess
+    ranked = sorted([c for c in campaigns.values() if c["revenue"] > 0],
+                    key=lambda x: -x["revenue"])[:top_n]
+    return ranked
+
+
+def parse_ga4_new_vs_returning(rows: list) -> dict:
+    """מפרק לקוחות חדשים מול חוזרים. מחזיר None אם אין נתונים (fallback עדין)."""
+    new_data = {"sessions": 0, "users": 0, "revenue": 0, "transactions": 0}
+    returning_data = {"sessions": 0, "users": 0, "revenue": 0, "transactions": 0}
+    for row in rows:
+        type_val = str(row.get("new_vs_returning") or "").lower()
+        target = new_data if type_val == "new" else returning_data if type_val == "returning" else None
+        if target is None:
+            continue
+        target["sessions"] += float(row.get("sessions") or 0)
+        target["users"] += float(row.get("totalusers") or 0)
+        target["revenue"] += float(row.get("purchase_revenue") or 0)
+        target["transactions"] += float(row.get("transactions") or 0)
+
+    if (new_data["sessions"] + returning_data["sessions"]) <= 0:
+        return None
+    return {"new": new_data, "returning": returning_data}
