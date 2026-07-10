@@ -19,7 +19,7 @@ class WindsorClient:
         self.api_key = api_key
 
     def _fetch(self, connector: str, fields: list, date_from: str, date_to: str,
-               account_id: str = None, use_server_filter: bool = True) -> list:
+               account_id: str = None, use_server_filter: bool = True, retries: int = 2) -> list:
         params = {
             "api_key": self.api_key,
             "date_from": date_from,
@@ -30,18 +30,27 @@ class WindsorClient:
             params["filter"] = json.dumps([["account_id", "eq", account_id]])
 
         url = f"{WINDSOR_BASE}/{connector}"
-        resp = requests.get(url, params=params, timeout=30)
-        resp.raise_for_status()
-        data = resp.json()
-        rows = data.get("data", data) if isinstance(data, dict) else data
 
-        # סינון בטיחות בצד הלקוח
-        if account_id:
-            target = "".join(c for c in str(account_id) if c.isdigit())
-            filtered = [r for r in rows if "".join(c for c in str(r.get("account_id", "")) if c.isdigit()) == target]
-            if filtered:
-                return filtered
-        return rows
+        last_error = None
+        for attempt in range(retries + 1):
+            try:
+                resp = requests.get(url, params=params, timeout=60)
+                resp.raise_for_status()
+                data = resp.json()
+                rows = data.get("data", data) if isinstance(data, dict) else data
+
+                # סינון בטיחות בצד הלקוח
+                if account_id:
+                    target = "".join(c for c in str(account_id) if c.isdigit())
+                    filtered = [r for r in rows if "".join(c for c in str(r.get("account_id", "")) if c.isdigit()) == target]
+                    if filtered:
+                        return filtered
+                return rows
+            except requests.exceptions.RequestException as e:
+                last_error = e
+                if attempt < retries:
+                    continue
+        raise last_error
 
     def get_meta_campaign_data(self, account_id: str, date_from: str, date_to: str) -> list:
         return self._fetch("facebook",
