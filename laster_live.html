@@ -65,16 +65,20 @@
   .bn-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; max-width:560px; }
   .bn-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; box-shadow:0 1px 3px rgba(0,0,0,.05); border-right:4px solid; }
   .bn-brand { border-right-color:var(--brand); } .bn-nonbrand { border-right-color:var(--nonbrand); }
+  .nr-new { border-right-color:var(--client); } .nr-returning { border-right-color:var(--muted); }
+  .nr-new .bn-tag, .nr-new .bn-roas { color:var(--client); }
+  .nr-returning .bn-tag, .nr-returning .bn-roas { color:var(--text2); }
   .bn-tag { font-size:12px; font-weight:700; margin-bottom:8px; }
   .bn-brand .bn-tag { color:var(--brand); } .bn-nonbrand .bn-tag { color:var(--nonbrand); }
   .bn-roas { font-size:28px; font-weight:800; letter-spacing:-1px; }
   .bn-brand .bn-roas { color:var(--brand); } .bn-nonbrand .bn-roas { color:var(--nonbrand); }
   .bn-detail { font-size:12px; color:var(--muted); margin-top:6px; font-weight:600; }
-  .funnel { display:flex; flex-direction:column; gap:10px; }
-  .fn-row { display:flex; align-items:center; gap:14px; }
-  .fn-bar { height:44px; border-radius:10px; display:flex; align-items:center; padding:0 18px; color:#fff;
-    font-weight:700; font-size:14px; min-width:120px; }
-  .fn-meta { font-size:12px; color:var(--text2); font-weight:600; }
+  .funnel { display:flex; flex-direction:column; gap:12px; }
+  .fn-row { display:flex; align-items:center; gap:12px; }
+  .fn-label { width:115px; font-size:12px; font-weight:600; flex-shrink:0; }
+  .fn-track { flex:1; height:22px; background:var(--surface2); border-radius:6px; overflow:hidden; }
+  .fn-fill { height:100%; border-radius:6px; transition:width .3s; }
+  .fn-val { width:130px; font-size:11.5px; font-weight:700; text-align:left; flex-shrink:0; }
   .ch-row { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
   .ch-row:last-child { margin-bottom:0; }
   .ch-name { width:115px; font-size:12px; font-weight:600; flex-shrink:0; }
@@ -216,17 +220,17 @@ function render(d) {
     const atcPct = (atc / sess * 100);
     const checkoutPct = (checkouts / sess * 100);
     const crPct = parseFloat(cr);
-    const atcW = Math.min(atcPct * 2, 90);
-    const checkoutW = Math.min(checkoutPct * 2, 75);
-    const crW = Math.min(crPct * 2, 55);
+    const atcW = Math.min(Math.max(atcPct, 3), 100);
+    const checkoutW = Math.min(Math.max(checkoutPct, 3), 100);
+    const crW = Math.min(Math.max(crPct, 3), 100);
     const checkoutRow = checkouts > 0
-      ? `<div class="fn-row"><div class="fn-bar" style="background:#f59e0b;width:${checkoutW}%">מעבר ל-Checkout · ${checkouts.toLocaleString()}</div><div class="fn-meta">${checkoutPct.toFixed(1)}% מהסשנים</div></div>`
+      ? `<div class="fn-row"><div class="fn-label">מעבר ל-Checkout</div><div class="fn-track"><div class="fn-fill" style="width:${checkoutW}%;background:#f59e0b"></div></div><div class="fn-val">${checkouts.toLocaleString()} · ${checkoutPct.toFixed(1)}%</div></div>`
       : '';
     funnelHtml = `<div class="sec">🔻 משפך המרה (GA4)</div><div class="card"><div class="funnel">
-      <div class="fn-row"><div class="fn-bar" style="background:var(--client);width:100%">סשנים · ${sess.toLocaleString()}</div></div>
-      <div class="fn-row"><div class="fn-bar" style="background:var(--client2);width:${atcW}%">הוספות לעגלה · ${atc.toLocaleString()}</div><div class="fn-meta">${atcPct.toFixed(1)}% מהסשנים</div></div>
+      <div class="fn-row"><div class="fn-label">סשנים</div><div class="fn-track"><div class="fn-fill" style="width:100%;background:var(--client)"></div></div><div class="fn-val">${sess.toLocaleString()}</div></div>
+      <div class="fn-row"><div class="fn-label">הוספות לעגלה</div><div class="fn-track"><div class="fn-fill" style="width:${atcW}%;background:var(--client2)"></div></div><div class="fn-val">${atc.toLocaleString()} · ${atcPct.toFixed(1)}%</div></div>
       ${checkoutRow}
-      <div class="fn-row"><div class="fn-bar" style="background:#10b981;width:${crW}%">רכישות · ${trans.toLocaleString()}</div><div class="fn-meta">${crPct}% שיעור המרה</div></div>
+      <div class="fn-row"><div class="fn-label">רכישות</div><div class="fn-track"><div class="fn-fill" style="width:${crW}%;background:#10b981"></div></div><div class="fn-val">${trans.toLocaleString()} · ${crPct}%</div></div>
     </div></div>`;
   }
 
@@ -239,9 +243,11 @@ function render(d) {
     const totalSess = nr.new.sessions + nr.returning.sessions;
     const newPct = (nr.new.sessions / totalSess * 100).toFixed(0);
     const retPct = (nr.returning.sessions / totalSess * 100).toFixed(0);
-    newReturningHtml = `<div class="sec">👥 לקוחות חדשים מול חוזרים</div><div class="bn-grid">
-      <div class="bn-card bn-brand"><div class="bn-tag">🆕 חדשים (${newPct}%)</div><div class="bn-roas">${fmt(nr.new.revenue)}</div><div class="bn-detail">${nr.new.transactions.toLocaleString()} עסקאות · ${fmt(nRoas)} ממוצע להזמנה</div></div>
-      <div class="bn-card bn-nonbrand"><div class="bn-tag">🔁 חוזרים (${retPct}%)</div><div class="bn-roas">${fmt(nr.returning.revenue)}</div><div class="bn-detail">${nr.returning.transactions.toLocaleString()} עסקאות · ${fmt(rRoas)} ממוצע להזמנה</div></div>
+    newReturningHtml = `<div class="sec">👥 לקוחות חדשים מול חוזרים</div>
+    <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:10px">סה"כ ${(nr.new.transactions+nr.returning.transactions).toLocaleString()} עסקאות בתקופה</div>
+    <div class="bn-grid">
+      <div class="bn-card nr-new"><div class="bn-tag">🆕 חדשים (${newPct}%)</div><div class="bn-roas">${fmt(nr.new.revenue)}</div><div class="bn-detail">${nr.new.transactions.toLocaleString()} עסקאות · ${fmt(nRoas)} ממוצע להזמנה</div></div>
+      <div class="bn-card nr-returning"><div class="bn-tag">🔁 חוזרים (${retPct}%)</div><div class="bn-roas">${fmt(nr.returning.revenue)}</div><div class="bn-detail">${nr.returning.transactions.toLocaleString()} עסקאות · ${fmt(rRoas)} ממוצע להזמנה</div></div>
     </div>`;
   }
 

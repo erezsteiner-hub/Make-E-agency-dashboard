@@ -177,19 +177,19 @@ def build_full_report(client_config: dict, current: dict, previous: dict,
     if ga4_sessions > 0:
         atc_pct = (ga4_atc / ga4_sessions * 100) if ga4_sessions > 0 else 0
         checkout_pct = (ga4_checkouts / ga4_sessions * 100) if ga4_sessions > 0 else 0
-        atc_width = min(atc_pct * 2, 90)
-        checkout_width = min(checkout_pct * 2, 75)
-        cr_width = min(cr * 2, 55)
+        atc_width = min(max(atc_pct, 3), 100)
+        checkout_width = min(max(checkout_pct, 3), 100)
+        cr_width = min(max(cr, 3), 100)
         checkout_row = ""
         if ga4_checkouts > 0:
-            checkout_row = f'''<div class="fn-row"><div class="fn-bar" style="background:#f59e0b;width:{checkout_width:.0f}%">מעבר ל-Checkout · {ga4_checkouts:,.0f}</div><div class="fn-meta">{checkout_pct:.1f}% מהסשנים</div></div>'''
+            checkout_row = f'''<div class="fn-row"><div class="fn-label">מעבר ל-Checkout</div><div class="fn-track"><div class="fn-fill" style="width:{checkout_width:.0f}%;background:#f59e0b"></div></div><div class="fn-val">{ga4_checkouts:,.0f} · {checkout_pct:.1f}%</div></div>'''
         funnel_html = f'''<div class="sec">🔻 משפך המרה (GA4)</div>
         <div class="card">
           <div class="funnel">
-            <div class="fn-row"><div class="fn-bar" style="background:var(--client);width:100%">סשנים · {ga4_sessions:,.0f}</div></div>
-            <div class="fn-row"><div class="fn-bar" style="background:var(--client2);width:{atc_width:.0f}%">הוספות לעגלה · {ga4_atc:,.0f}</div><div class="fn-meta">{atc_pct:.1f}% מהסשנים</div></div>
+            <div class="fn-row"><div class="fn-label">סשנים</div><div class="fn-track"><div class="fn-fill" style="width:100%;background:var(--client)"></div></div><div class="fn-val">{ga4_sessions:,.0f}</div></div>
+            <div class="fn-row"><div class="fn-label">הוספות לעגלה</div><div class="fn-track"><div class="fn-fill" style="width:{atc_width:.0f}%;background:var(--client2)"></div></div><div class="fn-val">{ga4_atc:,.0f} · {atc_pct:.1f}%</div></div>
             {checkout_row}
-            <div class="fn-row"><div class="fn-bar" style="background:#10b981;width:{cr_width:.0f}%">רכישות · {ga4_transactions:,.0f}</div><div class="fn-meta">{cr:.2f}% שיעור המרה</div></div>
+            <div class="fn-row"><div class="fn-label">רכישות</div><div class="fn-track"><div class="fn-fill" style="width:{cr_width:.0f}%;background:#10b981"></div></div><div class="fn-val">{ga4_transactions:,.0f} · {cr:.2f}%</div></div>
           </div>
         </div>'''
 
@@ -205,11 +205,12 @@ def build_full_report(client_config: dict, current: dict, previous: dict,
             n_aov = (nd["revenue"] / nd["transactions"]) if nd["transactions"] > 0 else 0
             r_aov = (rd["revenue"] / rd["transactions"]) if rd["transactions"] > 0 else 0
             new_returning_html = f'''<div class="sec">👥 לקוחות חדשים מול חוזרים</div>
+            <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:10px">סה"כ {(nd["transactions"]+rd["transactions"]):,.0f} עסקאות בתקופה</div>
             <div class="bn-grid">
-              <div class="bn-card bn-brand"><div class="bn-tag">🆕 חדשים ({new_pct:.0f}%)</div>
+              <div class="bn-card nr-new"><div class="bn-tag">🆕 חדשים ({new_pct:.0f}%)</div>
                 <div class="bn-roas">{fmt(nd["revenue"])}</div>
                 <div class="bn-detail">{nd["transactions"]:,.0f} עסקאות · {fmt(n_aov)} ממוצע להזמנה</div></div>
-              <div class="bn-card bn-nonbrand"><div class="bn-tag">🔁 חוזרים ({ret_pct:.0f}%)</div>
+              <div class="bn-card nr-returning"><div class="bn-tag">🔁 חוזרים ({ret_pct:.0f}%)</div>
                 <div class="bn-roas">{fmt(rd["revenue"])}</div>
                 <div class="bn-detail">{rd["transactions"]:,.0f} עסקאות · {fmt(r_aov)} ממוצע להזמנה</div></div>
             </div>'''
@@ -285,16 +286,20 @@ def build_full_report(client_config: dict, current: dict, previous: dict,
   .bn-grid {{ display:grid; grid-template-columns:1fr 1fr; gap:14px; max-width:560px; }}
   .bn-card {{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; border-right:4px solid; }}
   .bn-brand {{ border-right-color:var(--brand); }} .bn-nonbrand {{ border-right-color:var(--nonbrand); }}
+  .nr-new {{ border-right-color:var(--client); }} .nr-returning {{ border-right-color:var(--muted); }}
   .bn-tag {{ font-size:12px; font-weight:700; margin-bottom:8px; }}
   .bn-brand .bn-tag {{ color:var(--brand); }} .bn-nonbrand .bn-tag {{ color:var(--nonbrand); }}
+  .nr-new .bn-tag, .nr-new .bn-roas {{ color:var(--client); }}
+  .nr-returning .bn-tag, .nr-returning .bn-roas {{ color:var(--text2); }}
   .bn-roas {{ font-size:30px; font-weight:800; }}
   .bn-brand .bn-roas {{ color:var(--brand); }} .bn-nonbrand .bn-roas {{ color:var(--nonbrand); }}
   .bn-detail {{ font-size:12px; color:var(--muted); margin-top:6px; font-weight:600; }}
-  .funnel {{ display:flex; flex-direction:column; gap:10px; }}
-  .fn-row {{ display:flex; align-items:center; gap:14px; }}
-  .fn-bar {{ height:44px; border-radius:10px; display:flex; align-items:center; padding:0 18px; color:#fff;
-    font-weight:700; font-size:14px; min-width:120px; }}
-  .fn-meta {{ font-size:12px; color:var(--text2); font-weight:600; }}
+  .funnel {{ display:flex; flex-direction:column; gap:12px; }}
+  .fn-row {{ display:flex; align-items:center; gap:12px; }}
+  .fn-label {{ width:115px; font-size:12px; font-weight:600; flex-shrink:0; }}
+  .fn-track {{ flex:1; height:22px; background:var(--surface2); border-radius:6px; overflow:hidden; }}
+  .fn-fill {{ height:100%; border-radius:6px; }}
+  .fn-val {{ width:140px; font-size:11.5px; font-weight:700; text-align:left; flex-shrink:0; }}
   .ch-row {{ display:flex; align-items:center; gap:12px; margin-bottom:12px; }}
   .ch-name {{ width:115px; font-size:12px; font-weight:600; flex-shrink:0; }}
   .ch-track {{ flex:1; height:20px; background:var(--surface2); border-radius:6px; overflow:hidden; }}
