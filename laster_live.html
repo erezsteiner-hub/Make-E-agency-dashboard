@@ -79,6 +79,15 @@
   .fn-track { flex:1; height:22px; background:var(--surface2); border-radius:6px; overflow:hidden; }
   .fn-fill { height:100%; border-radius:6px; transition:width .3s; }
   .fn-val { width:130px; font-size:11.5px; font-weight:700; text-align:left; flex-shrink:0; }
+  .creative-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:14px; }
+  .cr-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.05); }
+  .cr-img { width:100%; aspect-ratio:1/1; object-fit:cover; background:var(--surface2); display:block; }
+  .cr-body { padding:10px 12px; }
+  .cr-name { font-size:11px; font-weight:600; color:var(--text2); overflow:hidden; text-overflow:ellipsis;
+    white-space:nowrap; margin-bottom:8px; }
+  .cr-stats { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
+  .cr-stats span:first-child { font-size:13px; font-weight:700; }
+  .cr-purch { font-size:11px; color:var(--muted); font-weight:600; }
   .ch-row { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
   .ch-row:last-child { margin-bottom:0; }
   .ch-name { width:115px; font-size:12px; font-weight:600; flex-shrink:0; }
@@ -279,6 +288,24 @@ function render(d) {
     gaCampaignsSection = `<div class="sec">🎯 קמפיינים מובילים (GA4)</div><div class="tbl-card"><div class="tbl-scroll"><table><thead><tr><th>#</th><th>קמפיין</th><th>הכנסה</th><th>עסקאות</th><th>סשנים</th></tr></thead><tbody>${gaCampaigns.map((c,i)=>`<tr><td class="num" style="color:var(--muted)">${i+1}</td><td>${c.name}</td><td class="num">${fmt(c.revenue)}</td><td class="num">${c.transactions}</td><td class="num">${c.sessions.toLocaleString()}</td></tr>`).join('')}</tbody></table></div></div>`;
   }
 
+  // דוח חדש — ביצועי קריאייטיב (Meta)
+  const creatives = d.top_creatives || [];
+  let creativesSection = '';
+  if (creatives.length) {
+    creativesSection = `<div class="sec">🖼️ ביצועי קריאייטיב (Meta)</div><div class="creative-grid">${creatives.map(c=>`
+      <div class="cr-card">
+        <img class="cr-img" src="${c.thumbnail}" alt="" loading="lazy" onerror="this.style.display='none'">
+        <div class="cr-body">
+          <div class="cr-name" title="${c.name}">${c.name}</div>
+          <div class="cr-stats">
+            <span>${fmt(c.spend)}</span>
+            <span class="chip ${rClass(c.roas)}">${c.roas.toFixed(2)}x</span>
+          </div>
+          <div class="cr-purch">${c.purch} רכישות</div>
+        </div>
+      </div>`).join('')}</div>`;
+  }
+
   document.getElementById('root').innerHTML = `
     <div class="hl-grid">${hl}</div>
     <div class="sec">📈 מגמת ביצועים יומית</div>
@@ -292,6 +319,7 @@ function render(d) {
     <div class="sec">💰 הכנסות לפי ערוץ (GA4)</div><div class="card">${chBars||'<div style="color:var(--muted);text-align:center;padding:20px">אין נתוני ערוצים לתקופה זו</div>'}</div>
     ${productsSection}
     ${gaCampaignsSection}
+    ${creativesSection}
     <div class="sec">📋 קמפייני Meta</div><div class="tbl-card"><div class="tbl-scroll"><table><thead><tr><th>קמפיין</th><th>הוצאה</th><th>ROAS</th><th>רכישות</th></tr></thead><tbody>${mc}</tbody></table></div></div>
     ${gcSection}`;
 
