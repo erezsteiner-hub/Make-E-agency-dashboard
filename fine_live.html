@@ -83,8 +83,9 @@
   .cr-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.05); }
   .cr-img { width:100%; aspect-ratio:1/1; object-fit:cover; background:var(--surface2); display:block; }
   .cr-body { padding:10px 12px; }
-  .cr-name { font-size:11px; font-weight:600; color:var(--text2); overflow:hidden; text-overflow:ellipsis;
-    white-space:nowrap; margin-bottom:8px; }
+  .cr-name { font-size:11px; font-weight:600; color:var(--text2); word-break:break-word;
+    line-height:1.4; margin-bottom:8px; min-height:30px; }
+  .cr-legend { font-size:11px; color:var(--muted); font-weight:600; margin-bottom:12px; }
   .cr-stats { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
   .cr-stats span:first-child { font-size:13px; font-weight:700; }
   .cr-purch { font-size:11px; color:var(--muted); font-weight:600; }
@@ -292,11 +293,14 @@ function render(d) {
   const creatives = d.top_creatives || [];
   let creativesSection = '';
   if (creatives.length) {
-    creativesSection = `<div class="sec">🖼️ ביצועי קריאייטיב (Meta)</div><div class="creative-grid">${creatives.map(c=>`
+    const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    creativesSection = `<div class="sec">🖼️ ביצועי קריאייטיב (Meta)</div>
+      <div class="cr-legend">🟢 ROAS 4x ומעלה &nbsp; 🟡 ROAS 2–4x &nbsp; 🔴 ROAS מתחת ל-2x</div>
+      <div class="creative-grid">${creatives.map(c=>`
       <div class="cr-card">
-        <img class="cr-img" src="${c.thumbnail}" alt="" loading="lazy" onerror="this.style.display='none'">
+        <img class="cr-img" src="${esc(c.thumbnail)}" alt="" loading="lazy" onerror="this.onerror=null;this.style.display='none'">
         <div class="cr-body">
-          <div class="cr-name" title="${c.name}">${c.name}</div>
+          <div class="cr-name">${esc(c.name)}</div>
           <div class="cr-stats">
             <span>${fmt(c.spend)}</span>
             <span class="chip ${rClass(c.roas)}">${c.roas.toFixed(2)}x</span>
