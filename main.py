@@ -112,6 +112,13 @@ CLIENT_BRANDS = {
         "text": "#111111", "text2": "#333333", "muted": "#777777",
         "meta_account": "265005426163824", "google_account": "377-969-5637", "ga4_account": "401528124",
     },
+    "pablo": {
+        "name": "PABLO", "initials": "PB", "color": "#B4653F", "color2": "#D68A67",
+        "font": "Heebo", "font_url": "https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&display=swap",
+        "bg": "#faf6f3", "surface2": "#f3e9e2", "border": "#ecdccf",
+        "text": "#2a1a12", "text2": "#5a4033", "muted": "#a08670",
+        "meta_account": "661581863643798", "google_account": "178-480-5862", "ga4_account": "554232841",
+    },
 }
 
 
