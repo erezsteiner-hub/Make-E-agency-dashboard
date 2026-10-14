@@ -112,6 +112,18 @@
   .retry { background:var(--client); color:#fff; border:none; border-radius:8px; padding:9px 20px; font-size:13px; font-weight:700; cursor:pointer; margin-top:14px; font-family:var(--font); }
   .footer { text-align:center; padding:26px; font-size:11.5px; color:var(--muted); border-top:1px solid var(--border); margin-top:36px; font-weight:500; }
   @media(max-width:640px){ .wrap,.hero { padding-left:16px; padding-right:16px; } .hl-grid { grid-template-columns:repeat(2,1fr); } }
+
+  .plat-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .plat-box { border:1px solid #e6ebf3; border-top:4px solid var(--pc); border-radius:14px; padding:14px 14px 12px; background:#fff; }
+  .plat-name { font-weight:800; font-size:14px; color:var(--pc); margin-bottom:8px; display:flex; justify-content:space-between; align-items:baseline; }
+  .plat-share { font-size:12px; font-weight:700; color:var(--muted); }
+  .plat-spend { font-size:22px; font-weight:800; margin-bottom:10px; }
+  .plat-row { display:flex; justify-content:space-between; font-size:12.5px; padding:4px 0; border-top:1px dashed #eef2f9; }
+  .plat-row span:first-child { color:var(--muted); font-weight:600; }
+  .plat-row span:last-child { font-weight:700; }
+  .plat-bar { height:6px; border-radius:4px; background:#eef2f9; margin:2px 0 10px; overflow:hidden; }
+  .plat-bar > div { height:100%; background:var(--pc); border-radius:4px; }
+  @media(max-width:420px){ .plat-grid { grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
@@ -198,6 +210,7 @@ async function getUsdToIlsRate() {
 // any ROAS that was computed server-side against the unconverted USD spend.
 function convertMetaSpendToIls(d, rate) {
   if (d.meta && typeof d.meta.spend === 'number') d.meta.spend = d.meta.spend * rate;
+  if (d.meta && typeof d.meta.value === 'number') d.meta.value = d.meta.value * rate;
   (d.meta_campaigns || []).forEach(c => {
     if (typeof c.spend === 'number') c.spend = c.spend * rate;
     if (typeof c.roas === 'number' && rate) c.roas = c.roas / rate;
@@ -247,6 +260,8 @@ function render(d) {
     <div class="hl-card"><div class="hl-label">Orders</div><div class="hl-val">${(d.ga4?.transactions||0).toLocaleString()}</div><div class="hl-sub">GA4 transactions</div></div>
     <div class="hl-card"><div class="hl-label">Total Ad Spend</div><div class="hl-val">${fmt(totalSpend)}</div><div class="hl-sub">Meta + Google</div></div>
     <div class="hl-card"><div class="hl-label">Blended ROAS</div><div class="hl-val">${d.blended_roas||0}x</div><div class="hl-sub">Revenue ÷ Spend</div></div>
+    ${d.meta?.spend>0?`<div class="hl-card"><div class="hl-label">ROAS Meta</div><div class="hl-val">${(+d.meta.roas||0).toFixed(2)}x</div><div class="hl-sub">As reported by Meta</div></div>`:''}
+    ${d.google?.spend>0?`<div class="hl-card"><div class="hl-label">ROAS Google</div><div class="hl-val">${(+d.google.roas||0).toFixed(2)}x</div><div class="hl-sub">As reported by Google</div></div>`:''}
     <div class="hl-card"><div class="hl-label">Sessions</div><div class="hl-val">${((d.ga4?.sessions||0)/1000).toFixed(1)}K</div><div class="hl-sub">${cr}% conversion</div></div>
     <div class="hl-card"><div class="hl-label">Average Order Value (AOV)</div><div class="hl-val">${fmt(aov)}</div><div class="hl-sub">Revenue ÷ Orders</div></div>`;
 
@@ -350,12 +365,27 @@ function render(d) {
       </div>`).join('')}</div>`;
   }
 
+  // הוצאה לפי פלטפורמה — ריבועים
+  const platTotal = (d.meta?.spend||0) + (d.google?.spend||0);
+  const platDefs = [
+    {key:'meta', name:'Meta', color:'#0866ff', purch: d.meta?.purch},
+    {key:'google', name:'Google', color:'#ea4335', purch: null},
+  ];
+  const platBoxes = platTotal > 0 ? `<div class="plat-grid">${platDefs.filter(p => (d[p.key]?.spend||0) > 0).map(p => {
+    const sp = d[p.key].spend, roas = +d[p.key].roas || 0, share = sp / platTotal * 100;
+    return `<div class="plat-box" style="--pc:${p.color}"><div class="plat-name">${p.name}<span class="plat-share">${share.toFixed(0)}% of spend</span></div>
+      <div class="plat-spend">${fmt(sp)}</div><div class="plat-bar"><div style="width:${share}%"></div></div>
+      <div class="plat-row"><span>ROAS</span><span>${roas.toFixed(2)}x</span></div>
+      <div class="plat-row"><span>Revenue (platform-reported)</span><span>${fmt(d[p.key].value!=null ? d[p.key].value : sp*roas)}</span></div>
+      ${p.purch!=null?`<div class="plat-row"><span>Purchases</span><span>${Math.round(p.purch).toLocaleString()}</span></div>`:''}</div>`;
+  }).join('')}</div>` : `<div style="color:var(--muted);text-align:center;padding:20px">No spend in period</div>`;
+
   document.getElementById('root').innerHTML = `
     <div class="hl-grid">${hl}</div>
     <div class="sec">📈 Daily Performance Trend</div>
     <div class="grid-2">
-      <div class="card"><div class="card-title">Daily Revenue (GA4)</div><div class="card-sub">${d.period.from} to ${d.period.to}</div><div class="chart-box"><canvas id="trendC"></canvas></div></div>
-      <div class="card"><div class="card-title">Spend by Platform</div><div class="card-sub">Meta vs Google</div><div class="chart-box sm"><canvas id="pieC"></canvas></div></div>
+      <div class="card"><div class="card-title">Revenue vs Sessions — Daily</div><div class="card-sub">${d.period.from} to ${d.period.to}</div><div class="chart-box"><canvas id="trendC"></canvas></div></div>
+      <div class="card"><div class="card-title">Spend by Platform</div><div class="card-sub">Meta vs Google</div>${platBoxes}</div>
     </div>
     ${bn}
     ${funnelHtml}
@@ -368,23 +398,27 @@ function render(d) {
     ${gcSection}`;
 
   // Trend chart
-  const daily = d.daily || {dates:[],revenue:[]};
+  const ga4d = d.daily || {dates:[],revenue:[],sessions:[]};
+  const revd = ga4d;
+  const revBy = {}, sesBy = {};
+  (revd.dates||[]).forEach((x,i) => revBy[x] = (revd.revenue||[])[i] || 0);
+  (ga4d.dates||[]).forEach((x,i) => sesBy[x] = (ga4d.sessions||[])[i] || 0);
+  const trendDates = [...new Set([...(revd.dates||[]), ...(ga4d.dates||[])])].sort();
   charts.trend = new Chart(document.getElementById('trendC'), {
     type:'line',
-    data:{labels:daily.dates,datasets:[{label:'GA4 Revenue',data:daily.revenue,borderColor:CONFIG.color,backgroundColor:CONFIG.color+'1a',borderWidth:2.5,tension:.35,pointRadius:0,fill:true}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{rtl:false,bodyFont:{family:CONFIG.font},callbacks:{label:c=>'₪'+c.parsed.y.toLocaleString()}}},
-      scales:{y:{position:'right',grid:{color:'#eef2f9'},ticks:{font:{family:CONFIG.font,size:9},callback:v=>'₪'+(v>=1000?(v/1000).toFixed(0)+'K':v)}},x:{grid:{display:false},ticks:{font:{family:CONFIG.font,size:9},maxRotation:0,autoSkip:true,maxTicksLimit:9}}}}
+    data:{labels:trendDates,datasets:[
+      {label:'Revenue (GA4)',data:trendDates.map(x=>revBy[x]||0),yAxisID:'y',borderColor:CONFIG.color,backgroundColor:CONFIG.color+'1a',borderWidth:2.5,tension:.35,pointRadius:0,fill:true},
+      {label:'Sessions',data:trendDates.map(x=>sesBy[x]||0),yAxisID:'y1',borderColor:'#94a3b8',backgroundColor:'transparent',borderWidth:2,borderDash:[5,4],tension:.35,pointRadius:0,fill:false}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:true,position:'bottom',labels:{font:{family:CONFIG.font,size:11},usePointStyle:true,boxHeight:6,padding:12}},
+        tooltip:{bodyFont:{family:CONFIG.font},callbacks:{label:c=>c.dataset.yAxisID==='y'?c.dataset.label+': ₪'+Math.round(c.parsed.y).toLocaleString():c.dataset.label+': '+Math.round(c.parsed.y).toLocaleString()}}},
+      scales:{
+        y:{position:'right',grid:{color:'#eef2f9'},ticks:{font:{family:CONFIG.font,size:9},callback:v=>'₪'+(v>=1000?(v/1000).toFixed(0)+'K':v)}},
+        y1:{position:'left',grid:{display:false},ticks:{font:{family:CONFIG.font,size:9},color:'#94a3b8',callback:v=>v>=1000?(v/1000).toFixed(1)+'K':v}},
+        x:{grid:{display:false},ticks:{font:{family:CONFIG.font,size:9},maxRotation:0,autoSkip:true,maxTicksLimit:9}}}}
   });
 
-  // Pie chart
-  const pd=[],pl=[],pc=[];
-  if(d.meta?.spend>0){pl.push('Meta');pd.push(d.meta.spend);pc.push('#0866ff');}
-  if(d.google?.spend>0){pl.push('Google');pd.push(d.google.spend);pc.push('#ea4335');}
-  charts.pie = new Chart(document.getElementById('pieC'), {
-    type:'doughnut',
-    data:{labels:pl,datasets:[{data:pd,backgroundColor:pc,borderWidth:3,borderColor:'#fff'}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'bottom',labels:{font:{family:CONFIG.font,size:12},usePointStyle:true,padding:14}},tooltip:{rtl:false,bodyFont:{family:CONFIG.font},callbacks:{label:c=>c.label+': ₪'+c.parsed.toLocaleString()}}}}
-  });
 }
 
 // Init
