@@ -252,7 +252,8 @@ const rClass = r => r>=4?'c-green':r>=2?'c-yellow':'c-red';
 
 function render(d) {
   const totalSpend = (d.meta?.spend||0) + (d.google?.spend||0);
-  const sh = d.shopify || null;   // Shopify = source of truth when connected; otherwise GA4
+  // Shopify = מקור אמת; אם אין בו הזמנות לתקופה (למשל מעבר ל-60 יום בלי read_all_orders) אבל ב-GA4 יש — חוזרים ל-GA4
+  const sh = (d.shopify && !(d.shopify.orders === 0 && (d.ga4?.transactions||0) > 0)) ? d.shopify : null;
   const G = x => (x && x.gross != null) ? x.gross : (x ? x.revenue : 0);   // ברוטו לפני החזרות, עם חזרה לנטו
   const revenue = sh ? (sh.gross_revenue != null ? sh.gross_revenue : sh.revenue) : (d.ga4?.revenue||0);
   const netRev = sh ? sh.revenue : revenue;
