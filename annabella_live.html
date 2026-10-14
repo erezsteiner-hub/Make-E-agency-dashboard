@@ -150,7 +150,7 @@
   <div class="loading"><div class="spinner"></div><div style="font-weight:600">Loading live data...</div></div>
 </div></div>
 <div class="footer" id="footer">
-  <div>Live report · Data from Windsor (Meta + Google Ads + GA4)</div>
+  <div>Live report · Data from Windsor (Shopify + Meta + Google Ads + GA4)</div>
   <div class="footer-agency"><span>Powered by</span><img class="agency-logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA8AAAAFWCAYAAACmdvTsAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAFZVSURBVHhe7d0JvE1VG8fxlYQMoShDMryFImNUoqJokqGJoiShiUJFpLnQoJQkiUiRoRllqAiVqKRSGkQpVGQq8eq85/+093kvXdM9+9x7ztm/7+dzPvY++zrDPntYz1rPWmu/SJQDAAAAACDN5fL+BQAAAAAgrREAAwAAAABCgQAYAAAAABAKBMAAAAAAgFAgAAYAAAAAhAIBMAAAAAAgFAiAAQAAAAChQAAMAAAAAAgFAmAAAAAAQCgQAAMAAAAAQoEAGAAAAAAQCgTAAAAAAIBQIAAGAAAAAIQCATAAAAAAIBQIgAEAAAAAoUAADAAAAAAIBQJgAAAAAEAoEAADAAAAAEKBABgAAAAAEAoEwAAAAACAUCAABgAAAACEAgEwAAAAACAUCIABAAAAAKFAAAwAAAAACAUCYAAAAABAKBAAAwAAAABCgQAYAAAAABAKBMAAAAAAgFAgAAYAAAAAhAIBMAAAAAAgFAiAAQAAAAChQAAMAAAAAAgFAmAAAAAAQCgQAAMAAAAAQoEAGAAAAAAQCgTAAAAAAIBQIAAGAAAAAIQCATAAAAAAIBQIgAEAAAAAoUAADAAAAAAIBQJgAAAAAEAoEAADAAAAAEKBABgAAAAAEAoEwAAAAACAUCAABgAAAACEAgEwAAAAACAUCIABAAAAAKFAAAwAAAAACAUCYAAAAABAKBAAAwAAAABCgQAYAAAAABAKBMAAAAAAgFAgAAYAAAAAhAIBMAAAAAAgFAiAAQAAAAChQAAMAAAAAAgFAmAAAAAAQCgQAAMAAAAAQoEAGAAAAAAQCgTAAAAAAIBQIAAGAAAAAISAc/8DNNFokHOCdrIAAAAASUVORK5CYII=" alt="MAKE-E"></div>
 </div>
 
@@ -252,14 +252,18 @@ const rClass = r => r>=4?'c-green':r>=2?'c-yellow':'c-red';
 
 function render(d) {
   const totalSpend = (d.meta?.spend||0) + (d.google?.spend||0);
-  const cr = d.ga4?.sessions > 0 ? (d.ga4.transactions/d.ga4.sessions*100).toFixed(2) : 0;
-  const aov = d.ga4?.transactions > 0 ? (d.ga4.revenue / d.ga4.transactions) : 0;
+  const sh = d.shopify || null;   // Shopify = source of truth when connected; otherwise GA4
+  const revenue = sh ? sh.revenue : (d.ga4?.revenue||0);
+  const orders = sh ? sh.orders : (d.ga4?.transactions||0);
+  const cr = d.ga4?.sessions > 0 ? (orders/d.ga4.sessions*100).toFixed(2) : 0;
+  const aov = orders > 0 ? (revenue / orders) : 0;
+  const blended = sh ? (totalSpend > 0 ? (revenue/totalSpend).toFixed(2) : 0) : (d.blended_roas||0);
 
   // Highlights
-  let hl = `<div class="hl-card"><div class="hl-label">GA4 Revenue (Website)</div><div class="hl-val">${fmt(d.ga4?.revenue)}</div><div class="hl-sub">${(d.ga4?.transactions||0).toLocaleString()} orders</div></div>
-    <div class="hl-card"><div class="hl-label">Orders</div><div class="hl-val">${(d.ga4?.transactions||0).toLocaleString()}</div><div class="hl-sub">GA4 transactions</div></div>
+  let hl = `<div class="hl-card"><div class="hl-label">${sh?'Revenue (Shopify)':'GA4 Revenue (Website)'}</div><div class="hl-val">${fmt(revenue)}</div><div class="hl-sub">${orders.toLocaleString()} orders</div></div>
+    <div class="hl-card"><div class="hl-label">Orders</div><div class="hl-val">${orders.toLocaleString()}</div><div class="hl-sub">${sh?(sh.units||0).toLocaleString()+' units sold':'GA4 transactions'}</div></div>
     <div class="hl-card"><div class="hl-label">Total Ad Spend</div><div class="hl-val">${fmt(totalSpend)}</div><div class="hl-sub">Meta + Google</div></div>
-    <div class="hl-card"><div class="hl-label">Blended ROAS</div><div class="hl-val">${d.blended_roas||0}x</div><div class="hl-sub">Revenue ÷ Spend</div></div>
+    <div class="hl-card"><div class="hl-label">Blended ROAS</div><div class="hl-val">${blended}x</div><div class="hl-sub">Revenue ÷ Spend</div></div>
     ${d.meta?.spend>0?`<div class="hl-card"><div class="hl-label">ROAS Meta</div><div class="hl-val">${(+d.meta.roas||0).toFixed(2)}x</div><div class="hl-sub">As reported by Meta</div></div>`:''}
     ${d.google?.spend>0?`<div class="hl-card"><div class="hl-label">ROAS Google</div><div class="hl-val">${(+d.google.roas||0).toFixed(2)}x</div><div class="hl-sub">As reported by Google</div></div>`:''}
     <div class="hl-card"><div class="hl-label">Sessions</div><div class="hl-val">${((d.ga4?.sessions||0)/1000).toFixed(1)}K</div><div class="hl-sub">${cr}% conversion</div></div>
@@ -301,8 +305,19 @@ function render(d) {
 
   // New vs returning customers
   let newReturningHtml = '';
+  const snr = sh && sh.new_vs_returning;
   const nr = d.new_vs_returning;
-  if (nr && (nr.new.sessions + nr.returning.sessions) > 0) {
+  if (snr && (snr.new.orders + snr.returning.orders) > 0) {
+    const tot = snr.new.orders + snr.returning.orders;
+    const nAvg = snr.new.orders > 0 ? snr.new.revenue / snr.new.orders : 0;
+    const rAvg = snr.returning.orders > 0 ? snr.returning.revenue / snr.returning.orders : 0;
+    newReturningHtml = `<div class="sec">👥 New vs Returning Customers · Shopify</div>
+    <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:10px">Total ${tot.toLocaleString()} orders in period · share of orders</div>
+    <div class="bn-grid">
+      <div class="bn-card nr-new"><div class="bn-tag">🆕 New (${(snr.new.orders/tot*100).toFixed(0)}%)</div><div class="bn-roas">${fmt(snr.new.revenue)}</div><div class="bn-detail">${snr.new.orders.toLocaleString()} orders · ${fmt(nAvg)} avg order value</div></div>
+      <div class="bn-card nr-returning"><div class="bn-tag">🔁 Returning (${(snr.returning.orders/tot*100).toFixed(0)}%)</div><div class="bn-roas">${fmt(snr.returning.revenue)}</div><div class="bn-detail">${snr.returning.orders.toLocaleString()} orders · ${fmt(rAvg)} avg order value</div></div>
+    </div>`;
+  } else if (nr && (nr.new.sessions + nr.returning.sessions) > 0) {
     const nRoas = nr.new.transactions > 0 ? (nr.new.revenue / nr.new.transactions) : 0;
     const rRoas = nr.returning.transactions > 0 ? (nr.returning.revenue / nr.returning.transactions) : 0;
     const totalSess = nr.new.sessions + nr.returning.sessions;
@@ -331,10 +346,10 @@ function render(d) {
   }
 
   // Best Sellers (top products)
-  const products = d.top_products || [];
+  const products = (sh && sh.top_products?.length) ? sh.top_products : (d.top_products || []);
   let productsSection = '';
   if (products.length) {
-    productsSection = `<div class="sec">🛍️ Top Products (Best Sellers)</div><div class="tbl-card"><div class="tbl-scroll"><table><thead><tr><th>#</th><th>Product</th><th>Revenue</th><th>Units</th></tr></thead><tbody>${products.map((p,i)=>`<tr><td class="num" style="color:var(--muted)">${i+1}</td><td>${p.name}</td><td class="num">${fmt(p.revenue)}</td><td class="num">${p.qty}</td></tr>`).join('')}</tbody></table></div></div>`;
+    productsSection = `<div class="sec">🛍️ Top Products (Best Sellers)${sh?' · Shopify':''}</div><div class="tbl-card"><div class="tbl-scroll"><table><thead><tr><th>#</th><th>Product</th><th>Revenue</th><th>Units</th></tr></thead><tbody>${products.map((p,i)=>`<tr><td class="num" style="color:var(--muted)">${i+1}</td><td>${p.name}</td><td class="num">${fmt(p.revenue)}</td><td class="num">${p.qty}</td></tr>`).join('')}</tbody></table></div></div>`;
   }
 
   // Top campaigns by GA4
@@ -365,6 +380,27 @@ function render(d) {
       </div>`).join('')}</div>`;
   }
 
+  // Shopify — order source & discount codes
+  const SRC_EN = {'Meta':'Meta (FB/IG)','Google':'Google','TikTok':'TikTok','Email/SMS':'Email / SMS','Direct':'Direct','Unknown':'Unattributed','Other':'Other'};
+  const SRC_COLOR = {'Meta':'#0866ff','Google':'#ea4335','TikTok':'#111827','Email/SMS':'#f59e0b','Direct':'#64748b','Unknown':'#cbd5e1','Other':'#94a3b8'};
+  let shopSourcesSection = '';
+  const srcs = (sh && sh.order_sources) || [];
+  if (srcs.length) {
+    const sMax = Math.max(...srcs.map(x=>x.revenue), 1);
+    const sTot = srcs.reduce((a,x)=>a+x.orders,0);
+    shopSourcesSection = `<div class="sec">🧭 Order Source · Shopify</div><div class="card">
+      <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:10px">Based on the customer's last visit before purchase (store data, not platform reporting)</div>
+      ${srcs.map(x=>`<div class="ch-row"><div class="ch-name">${SRC_EN[x.channel]||x.channel}</div><div class="ch-track"><div class="ch-fill" style="width:${x.revenue/sMax*100}%;background:${SRC_COLOR[x.channel]||'#94a3b8'}"></div></div><div class="ch-val" style="width:auto;min-width:150px">${fmt(x.revenue)} · ${x.orders} orders (${(x.orders/sTot*100).toFixed(0)}%)</div></div>`).join('')}
+    </div>`;
+  }
+  let discountSection = '';
+  const dc = sh && sh.discount_codes;
+  if (dc && dc.codes && dc.codes.length) {
+    discountSection = `<div class="sec">🏷️ Discount Codes · Shopify</div>
+    <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:10px">${dc.orders_with_code.toLocaleString()} of ${dc.total_orders.toLocaleString()} orders used a code (${dc.total_orders>0?(dc.orders_with_code/dc.total_orders*100).toFixed(0):0}%)</div>
+    <div class="tbl-card"><div class="tbl-scroll"><table><thead><tr><th>Code</th><th>Orders</th><th>Revenue</th></tr></thead><tbody>${dc.codes.map(c=>`<tr><td>${c.code}</td><td class="num">${c.orders}</td><td class="num">${fmt(c.revenue)}</td></tr>`).join('')}</tbody></table></div></div>`;
+  }
+
   // הוצאה לפי פלטפורמה — ריבועים
   const platTotal = (d.meta?.spend||0) + (d.google?.spend||0);
   const platDefs = [
@@ -392,6 +428,8 @@ function render(d) {
     ${newReturningHtml}
     <div class="sec">💰 Revenue by Channel (GA4)</div><div class="card">${chBars||'<div style="color:var(--muted);text-align:center;padding:20px">No channel data for this period</div>'}</div>
     ${productsSection}
+    ${shopSourcesSection}
+    ${discountSection}
     ${gaCampaignsSection}
     ${creativesSection}
     <div class="sec">📋 Meta Campaigns</div><div class="tbl-card"><div class="tbl-scroll"><table><thead><tr><th>Campaign</th><th>Spend</th><th>ROAS</th><th>Purchases</th></tr></thead><tbody>${mc}</tbody></table></div></div>
@@ -399,7 +437,7 @@ function render(d) {
 
   // Trend chart
   const ga4d = d.daily || {dates:[],revenue:[],sessions:[]};
-  const revd = ga4d;
+  const revd = (sh && sh.daily?.dates?.length) ? sh.daily : ga4d;
   const revBy = {}, sesBy = {};
   (revd.dates||[]).forEach((x,i) => revBy[x] = (revd.revenue||[])[i] || 0);
   (ga4d.dates||[]).forEach((x,i) => sesBy[x] = (ga4d.sessions||[])[i] || 0);
@@ -407,7 +445,7 @@ function render(d) {
   charts.trend = new Chart(document.getElementById('trendC'), {
     type:'line',
     data:{labels:trendDates,datasets:[
-      {label:'Revenue (GA4)',data:trendDates.map(x=>revBy[x]||0),yAxisID:'y',borderColor:CONFIG.color,backgroundColor:CONFIG.color+'1a',borderWidth:2.5,tension:.35,pointRadius:0,fill:true},
+      {label:sh?'Revenue (Shopify)':'Revenue (GA4)',data:trendDates.map(x=>revBy[x]||0),yAxisID:'y',borderColor:CONFIG.color,backgroundColor:CONFIG.color+'1a',borderWidth:2.5,tension:.35,pointRadius:0,fill:true},
       {label:'Sessions',data:trendDates.map(x=>sesBy[x]||0),yAxisID:'y1',borderColor:'#94a3b8',backgroundColor:'transparent',borderWidth:2,borderDash:[5,4],tension:.35,pointRadius:0,fill:false}
     ]},
     options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
