@@ -211,13 +211,15 @@ async function getUsdToIlsRate() {
 function convertMetaSpendToIls(d, rate) {
   if (d.meta && typeof d.meta.spend === 'number') d.meta.spend = d.meta.spend * rate;
   if (d.meta && typeof d.meta.value === 'number') d.meta.value = d.meta.value * rate;
+  // Meta returns both spend and purchase value in the ad account currency (USD),
+  // so ROAS (value ÷ spend) is already currency-neutral — convert amounts only, never the ratio.
   (d.meta_campaigns || []).forEach(c => {
     if (typeof c.spend === 'number') c.spend = c.spend * rate;
-    if (typeof c.roas === 'number' && rate) c.roas = c.roas / rate;
+    if (typeof c.value === 'number') c.value = c.value * rate;
   });
   (d.top_creatives || []).forEach(c => {
     if (typeof c.spend === 'number') c.spend = c.spend * rate;
-    if (typeof c.roas === 'number' && rate) c.roas = c.roas / rate;
+    if (typeof c.value === 'number') c.value = c.value * rate;
   });
   return d;
 }
