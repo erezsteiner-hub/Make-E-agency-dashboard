@@ -253,17 +253,22 @@ const rClass = r => r>=4?'c-green':r>=2?'c-yellow':'c-red';
 function render(d) {
   const totalSpend = (d.meta?.spend||0) + (d.google?.spend||0);
   const sh = d.shopify || null;   // Shopify = source of truth when connected; otherwise GA4
-  const revenue = sh ? sh.revenue : (d.ga4?.revenue||0);
+  const G = x => (x && x.gross != null) ? x.gross : (x ? x.revenue : 0);   // ברוטו לפני החזרות, עם חזרה לנטו
+  const revenue = sh ? (sh.gross_revenue != null ? sh.gross_revenue : sh.revenue) : (d.ga4?.revenue||0);
+  const netRev = sh ? sh.revenue : revenue;
+  const returnsAmt = sh ? Math.max(0, revenue - netRev) : 0;
   const orders = sh ? sh.orders : (d.ga4?.transactions||0);
   const cr = d.ga4?.sessions > 0 ? (orders/d.ga4.sessions*100).toFixed(2) : 0;
   const aov = orders > 0 ? (revenue / orders) : 0;
   const blended = sh ? (totalSpend > 0 ? (revenue/totalSpend).toFixed(2) : 0) : (d.blended_roas||0);
+  const blendedNet = sh && totalSpend > 0 ? (netRev/totalSpend).toFixed(2) : null;
 
   // Highlights
-  let hl = `<div class="hl-card"><div class="hl-label">${sh?'Revenue (Shopify)':'GA4 Revenue (Website)'}</div><div class="hl-val">${fmt(revenue)}</div><div class="hl-sub">${orders.toLocaleString()} orders</div></div>
+  let hl = `<div class="hl-card"><div class="hl-label">${sh?'Gross Revenue (Shopify)':'GA4 Revenue (Website)'}</div><div class="hl-val">${fmt(revenue)}</div><div class="hl-sub">${orders.toLocaleString()} orders${sh?' · before returns':''}</div></div>
+    ${sh?`<div class="hl-card"><div class="hl-label">Net Revenue (after returns)</div><div class="hl-val">${fmt(netRev)}</div><div class="hl-sub">Returns ${fmt(returnsAmt)} (${revenue>0?(returnsAmt/revenue*100).toFixed(1):0}%)</div></div>`:''}
     <div class="hl-card"><div class="hl-label">Orders</div><div class="hl-val">${orders.toLocaleString()}</div><div class="hl-sub">${sh?(sh.units||0).toLocaleString()+' units sold':'GA4 transactions'}</div></div>
     <div class="hl-card"><div class="hl-label">Total Ad Spend</div><div class="hl-val">${fmt(totalSpend)}</div><div class="hl-sub">Meta + Google</div></div>
-    <div class="hl-card"><div class="hl-label">Blended ROAS</div><div class="hl-val">${blended}x</div><div class="hl-sub">Revenue ÷ Spend</div></div>
+    <div class="hl-card"><div class="hl-label">Blended ROAS</div><div class="hl-val">${blended}x</div><div class="hl-sub">${blendedNet!=null?'Gross · net '+blendedNet+'x':'Revenue ÷ Spend'}</div></div>
     ${d.meta?.spend>0?`<div class="hl-card"><div class="hl-label">ROAS Meta</div><div class="hl-val">${(+d.meta.roas||0).toFixed(2)}x</div><div class="hl-sub">As reported by Meta</div></div>`:''}
     ${d.google?.spend>0?`<div class="hl-card"><div class="hl-label">ROAS Google</div><div class="hl-val">${(+d.google.roas||0).toFixed(2)}x</div><div class="hl-sub">As reported by Google</div></div>`:''}
     <div class="hl-card"><div class="hl-label">Sessions</div><div class="hl-val">${((d.ga4?.sessions||0)/1000).toFixed(1)}K</div><div class="hl-sub">${cr}% conversion</div></div>
@@ -309,13 +314,13 @@ function render(d) {
   const nr = d.new_vs_returning;
   if (snr && (snr.new.orders + snr.returning.orders) > 0) {
     const tot = snr.new.orders + snr.returning.orders;
-    const nAvg = snr.new.orders > 0 ? snr.new.revenue / snr.new.orders : 0;
-    const rAvg = snr.returning.orders > 0 ? snr.returning.revenue / snr.returning.orders : 0;
+    const nAvg = snr.new.orders > 0 ? G(snr.new) / snr.new.orders : 0;
+    const rAvg = snr.returning.orders > 0 ? G(snr.returning) / snr.returning.orders : 0;
     newReturningHtml = `<div class="sec">👥 New vs Returning Customers · Shopify</div>
     <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:10px">Total ${tot.toLocaleString()} orders in period · share of orders</div>
     <div class="bn-grid">
-      <div class="bn-card nr-new"><div class="bn-tag">🆕 New (${(snr.new.orders/tot*100).toFixed(0)}%)</div><div class="bn-roas">${fmt(snr.new.revenue)}</div><div class="bn-detail">${snr.new.orders.toLocaleString()} orders · ${fmt(nAvg)} avg order value</div></div>
-      <div class="bn-card nr-returning"><div class="bn-tag">🔁 Returning (${(snr.returning.orders/tot*100).toFixed(0)}%)</div><div class="bn-roas">${fmt(snr.returning.revenue)}</div><div class="bn-detail">${snr.returning.orders.toLocaleString()} orders · ${fmt(rAvg)} avg order value</div></div>
+      <div class="bn-card nr-new"><div class="bn-tag">🆕 New (${(snr.new.orders/tot*100).toFixed(0)}%)</div><div class="bn-roas">${fmt(G(snr.new))}</div><div class="bn-detail">Net ${fmt(snr.new.revenue)} · ${snr.new.orders.toLocaleString()} orders · ${fmt(nAvg)} avg order value</div></div>
+      <div class="bn-card nr-returning"><div class="bn-tag">🔁 Returning (${(snr.returning.orders/tot*100).toFixed(0)}%)</div><div class="bn-roas">${fmt(G(snr.returning))}</div><div class="bn-detail">Net ${fmt(snr.returning.revenue)} · ${snr.returning.orders.toLocaleString()} orders · ${fmt(rAvg)} avg order value</div></div>
     </div>`;
   } else if (nr && (nr.new.sessions + nr.returning.sessions) > 0) {
     const nRoas = nr.new.transactions > 0 ? (nr.new.revenue / nr.new.transactions) : 0;
@@ -386,11 +391,11 @@ function render(d) {
   let shopSourcesSection = '';
   const srcs = (sh && sh.order_sources) || [];
   if (srcs.length) {
-    const sMax = Math.max(...srcs.map(x=>x.revenue), 1);
+    const sMax = Math.max(...srcs.map(x=>G(x)), 1);
     const sTot = srcs.reduce((a,x)=>a+x.orders,0);
     shopSourcesSection = `<div class="sec">🧭 Order Source · Shopify</div><div class="card">
       <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:10px">Based on the customer's last visit before purchase (store data, not platform reporting)</div>
-      ${srcs.map(x=>`<div class="ch-row"><div class="ch-name">${SRC_EN[x.channel]||x.channel}</div><div class="ch-track"><div class="ch-fill" style="width:${x.revenue/sMax*100}%;background:${SRC_COLOR[x.channel]||'#94a3b8'}"></div></div><div class="ch-val" style="width:auto;min-width:150px">${fmt(x.revenue)} · ${x.orders} orders (${(x.orders/sTot*100).toFixed(0)}%)</div></div>`).join('')}
+      ${srcs.map(x=>`<div class="ch-row"><div class="ch-name">${SRC_EN[x.channel]||x.channel}</div><div class="ch-track"><div class="ch-fill" style="width:${G(x)/sMax*100}%;background:${SRC_COLOR[x.channel]||'#94a3b8'}"></div></div><div class="ch-val" style="width:auto;min-width:150px">${fmt(G(x))} gross · ${x.orders} orders (${(x.orders/sTot*100).toFixed(0)}%)</div></div>`).join('')}
     </div>`;
   }
   let discountSection = '';
@@ -398,7 +403,7 @@ function render(d) {
   if (dc && dc.codes && dc.codes.length) {
     discountSection = `<div class="sec">🏷️ Discount Codes · Shopify</div>
     <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:10px">${dc.orders_with_code.toLocaleString()} of ${dc.total_orders.toLocaleString()} orders used a code (${dc.total_orders>0?(dc.orders_with_code/dc.total_orders*100).toFixed(0):0}%)</div>
-    <div class="tbl-card"><div class="tbl-scroll"><table><thead><tr><th>Code</th><th>Orders</th><th>Revenue</th></tr></thead><tbody>${dc.codes.map(c=>`<tr><td>${c.code}</td><td class="num">${c.orders}</td><td class="num">${fmt(c.revenue)}</td></tr>`).join('')}</tbody></table></div></div>`;
+    <div class="tbl-card"><div class="tbl-scroll"><table><thead><tr><th>Code</th><th>Orders</th><th>Gross</th><th>Net</th></tr></thead><tbody>${dc.codes.map(c=>`<tr><td>${c.code}</td><td class="num">${c.orders}</td><td class="num">${fmt(G(c))}</td><td class="num">${fmt(c.revenue)}</td></tr>`).join('')}</tbody></table></div></div>`;
   }
 
   // הוצאה לפי פלטפורמה — ריבועים
@@ -439,13 +444,15 @@ function render(d) {
   const ga4d = d.daily || {dates:[],revenue:[],sessions:[]};
   const revd = (sh && sh.daily?.dates?.length) ? sh.daily : ga4d;
   const revBy = {}, sesBy = {};
-  (revd.dates||[]).forEach((x,i) => revBy[x] = (revd.revenue||[])[i] || 0);
+  const netBy = {};
+  (revd.dates||[]).forEach((x,i) => { revBy[x] = ((revd.gross||revd.revenue)||[])[i] || 0; netBy[x] = (revd.revenue||[])[i] || 0; });
   (ga4d.dates||[]).forEach((x,i) => sesBy[x] = (ga4d.sessions||[])[i] || 0);
   const trendDates = [...new Set([...(revd.dates||[]), ...(ga4d.dates||[])])].sort();
   charts.trend = new Chart(document.getElementById('trendC'), {
     type:'line',
     data:{labels:trendDates,datasets:[
-      {label:sh?'Revenue (Shopify)':'Revenue (GA4)',data:trendDates.map(x=>revBy[x]||0),yAxisID:'y',borderColor:CONFIG.color,backgroundColor:CONFIG.color+'1a',borderWidth:2.5,tension:.35,pointRadius:0,fill:true},
+      {label:sh?'Gross Revenue (Shopify)':'Revenue (GA4)',data:trendDates.map(x=>revBy[x]||0),yAxisID:'y',borderColor:CONFIG.color,backgroundColor:CONFIG.color+'1a',borderWidth:2.5,tension:.35,pointRadius:0,fill:true},
+      ...(sh && revd.gross ? [{label:'Net revenue',data:trendDates.map(x=>netBy[x]||0),yAxisID:'y',borderColor:CONFIG.color,backgroundColor:'transparent',borderWidth:1.5,borderDash:[2,3],tension:.35,pointRadius:0,fill:false}] : []),
       {label:'Sessions',data:trendDates.map(x=>sesBy[x]||0),yAxisID:'y1',borderColor:'#94a3b8',backgroundColor:'transparent',borderWidth:2,borderDash:[5,4],tension:.35,pointRadius:0,fill:false}
     ]},
     options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
