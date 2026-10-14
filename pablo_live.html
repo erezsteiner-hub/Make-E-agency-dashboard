@@ -248,10 +248,23 @@ function render(d) {
     </div></div>`;
   }
 
-  // לקוחות חדשים מול חוזרים
+  // לקוחות חדשים מול חוזרים — Shopify (לפי היסטוריית הזמנות של הלקוח) אם זמין, אחרת GA4
   let newReturningHtml = '';
+  const snr = sh && sh.new_vs_returning;
   const nr = d.new_vs_returning;
-  if (nr && (nr.new.sessions + nr.returning.sessions) > 0) {
+  if (snr && (snr.new.orders + snr.returning.orders) > 0) {
+    const tot = snr.new.orders + snr.returning.orders;
+    const nAvg = snr.new.orders > 0 ? snr.new.revenue / snr.new.orders : 0;
+    const rAvg = snr.returning.orders > 0 ? snr.returning.revenue / snr.returning.orders : 0;
+    const newPct = (snr.new.orders / tot * 100).toFixed(0);
+    const retPct = (snr.returning.orders / tot * 100).toFixed(0);
+    newReturningHtml = `<div class="sec">👥 לקוחות חדשים מול חוזרים · Shopify</div>
+    <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:10px">סה"כ ${tot.toLocaleString()} הזמנות בתקופה · אחוז מתוך ההזמנות</div>
+    <div class="bn-grid">
+      <div class="bn-card nr-new"><div class="bn-tag">🆕 חדשים (${newPct}%)</div><div class="bn-roas">${fmt(snr.new.revenue)}</div><div class="bn-detail">${snr.new.orders.toLocaleString()} הזמנות · ${fmt(nAvg)} ממוצע להזמנה</div></div>
+      <div class="bn-card nr-returning"><div class="bn-tag">🔁 חוזרים (${retPct}%)</div><div class="bn-roas">${fmt(snr.returning.revenue)}</div><div class="bn-detail">${snr.returning.orders.toLocaleString()} הזמנות · ${fmt(rAvg)} ממוצע להזמנה</div></div>
+    </div>`;
+  } else if (nr && (nr.new.sessions + nr.returning.sessions) > 0) {
     const nRoas = nr.new.transactions > 0 ? (nr.new.revenue / nr.new.transactions) : 0;
     const rRoas = nr.returning.transactions > 0 ? (nr.returning.revenue / nr.returning.transactions) : 0;
     const totalSess = nr.new.sessions + nr.returning.sessions;
