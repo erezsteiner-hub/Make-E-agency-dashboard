@@ -150,7 +150,7 @@
   <div class="loading"><div class="spinner"></div><div style="font-weight:600">Loading live data...</div></div>
 </div></div>
 <div class="footer" id="footer">
-  <div>Live report · Data from Windsor (Shopify + Meta + Google Ads + GA4)</div>
+  <div>Live report · Data from Windsor (Shopify + Meta + Google Ads + GA4) + Klaviyo</div>
   <div class="footer-agency"><span>Powered by</span><img class="agency-logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA8AAAAFWCAYAAACmdvTsAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAFZVSURBVHhe7d0JvE1VG8fxlYQMoShDMryFImNUoqJokqGJoiShiUJFpLnQoJQkiUiRoRllqAiVqKRSGkQpVGQq8eq85/+093kvXdM9+9x7ztm/7+dzPvY++zrDPntYz1rPWmu/SJQDAAAAACDN5fL+BQAAAAAgrREAAwAAAABCgQAYAAAAABAKBMAAAAAAgFAgAAYAAAAAhAIBMAAAAAAgFAiAAQAAAAChQAAMAAAAAAgFAmAAAAAAQCgQAAMAAAAAQoEAGAAAAAAQCgTAAAAAAIBQIAAGAAAAAIQCATAAAAAAIBQIgAEAAAAAoUAADAAAAAAIBQJgAAAAAEAoEAADAAAAAEKBABgAAAAAEAoEwAAAAACAUCAABgAAAACEAgEwAAAAACAUCIABAAAAAKFAAAwAAAAACAUCYAAAAABAKBAAAwAAAABCgQAYAAAAABAKBMAAAAAAgFAgAAYAAAAAhAIBMAAAAAAgFAiAAQAAAAChQAAMAAAAAAgFAmAAAAAAQCgQAAMAAAAAQoEAGAAAAAAQCgTAAAAAAIBQIAAGAAAAAIQCATAAAAAAIBQIgAEAAAAAoUAADAAAAAAIBQJgAAAAAEAoEAADAAAAAEKBABgAAAAAEAoEwAAAAACAUCAABgAAAACEAgEwAAAAACAUCIABAAAAAKFAAAwAAAAACAUCYAAAAABAKBAAAwAAAABCgQAYAAAAABAKBMAAAAAAgFAgAAYAAAAAhAIBMAAAAAAgFAiAAQAAAAChQAAMAAAAAAgFAmAAAAAAQCgQAAMAAAAAQoEAGAAAAAAQCgTAAAAAAIBQIAAGAAAAAISAc/8DNNFokHOCdrIAAAAASUVORK5CYII=" alt="MAKE-E"></div>
 </div>
 
@@ -409,6 +409,31 @@ function render(d) {
     <div class="tbl-card"><div class="tbl-scroll"><table><thead><tr><th>Code</th><th>Orders</th><th>Gross</th><th>Net</th></tr></thead><tbody>${dc.codes.map(c=>`<tr><td>${c.code}</td><td class="num">${c.orders}</td><td class="num">${fmt(G(c))}</td><td class="num">${fmt(c.revenue)}</td></tr>`).join('')}</tbody></table></div></div>`;
   }
 
+  // Email & SMS marketing (Klaviyo)
+  let klaviyoSection = '';
+  const kv = d.klaviyo;
+  if (kv) {
+    const escK = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const share = revenue > 0 ? (kv.revenue / revenue * 100) : 0;
+    const flowPct = kv.revenue > 0 ? (kv.flow_revenue / kv.revenue * 100) : 0;
+    const chTag = c => c === 'sms' ? 'SMS' : c === 'multi' ? 'Email + SMS' : 'Email';
+    const net = (kv.list.subscribed != null && kv.list.unsubscribed != null) ? kv.list.subscribed - kv.list.unsubscribed : null;
+    const flowRows = (kv.flows||[]).map(f=>`<tr><td>${escK(f.name)}</td><td>${chTag(f.channel)}</td><td class="num">${f.recipients.toLocaleString()}</td><td class="num">${f.click_rate}%</td><td class="num">${Math.round(f.orders)}</td><td class="num">${fmt(f.revenue)}</td><td class="num">₪${f.rev_per_recipient.toFixed(2)}</td></tr>`).join('');
+    const campRows = (kv.campaigns||[]).map(c=>`<tr><td>${escK(c.name)}</td><td>${c.send_time?String(c.send_time).slice(0,10):'—'}</td><td>${chTag(c.channel)}</td><td class="num">${c.recipients.toLocaleString()}</td><td class="num">${c.click_rate}%</td><td class="num">${Math.round(c.orders)}</td><td class="num">${fmt(c.revenue)}</td></tr>`).join('');
+    klaviyoSection = `<div class="sec">✉️ Email & SMS Marketing · Klaviyo</div>
+    <div class="hl-grid" style="margin-top:0">
+      <div class="hl-card"><div class="hl-label">Email & SMS Revenue</div><div class="hl-val">${fmt(kv.revenue)}</div><div class="hl-sub">${Math.round(kv.orders).toLocaleString()} attributed orders</div></div>
+      ${sh?`<div class="hl-card"><div class="hl-label">Share of Store Revenue</div><div class="hl-val">${share.toFixed(1)}%</div><div class="hl-sub">of Shopify gross revenue</div></div>`:''}
+      <div class="hl-card"><div class="hl-label">Automations (Flows)</div><div class="hl-val">${fmt(kv.flow_revenue)}</div><div class="hl-sub">${flowPct.toFixed(0)}% of email revenue</div></div>
+      <div class="hl-card"><div class="hl-label">Campaigns</div><div class="hl-val">${fmt(kv.campaign_revenue)}</div><div class="hl-sub">${kv.campaigns_sent} sent · ${kv.recipients.toLocaleString()} recipients</div></div>
+      ${kv.list.subscribed!=null?`<div class="hl-card"><div class="hl-label">New Email Subscribers</div><div class="hl-val">${kv.list.subscribed.toLocaleString()}</div><div class="hl-sub">${kv.list.unsubscribed!=null?kv.list.unsubscribed.toLocaleString()+' unsubscribed · net '+(net>=0?'+':'')+net.toLocaleString():''}</div></div>`:''}
+      ${kv.back_in_stock!=null?`<div class="hl-card"><div class="hl-label">Back-in-Stock Requests</div><div class="hl-val">${kv.back_in_stock.toLocaleString()}</div><div class="hl-sub">Customers waiting for restock</div></div>`:''}
+    </div>
+    <div style="font-size:12px;color:var(--muted);font-weight:600;margin:10px 0">Revenue attributed by Klaviyo to emails and SMS (orders placed after opening or clicking). Updates every few hours.</div>
+    ${flowRows?`<div class="tbl-card" style="margin-bottom:14px"><div class="tbl-scroll"><table><thead><tr><th>Flow</th><th>Channel</th><th>Recipients</th><th>Click rate</th><th>Orders</th><th>Revenue</th><th>Rev / recipient</th></tr></thead><tbody>${flowRows}</tbody></table></div></div>`:''}
+    ${campRows?`<div class="tbl-card"><div class="tbl-scroll"><table><thead><tr><th>Campaign</th><th>Sent</th><th>Channel</th><th>Recipients</th><th>Click rate</th><th>Orders</th><th>Revenue</th></tr></thead><tbody>${campRows}</tbody></table></div></div>`:''}`;
+  }
+
   // הוצאה לפי פלטפורמה — ריבועים
   const platTotal = (d.meta?.spend||0) + (d.google?.spend||0);
   const platDefs = [
@@ -438,6 +463,7 @@ function render(d) {
     ${productsSection}
     ${shopSourcesSection}
     ${discountSection}
+    ${klaviyoSection}
     ${gaCampaignsSection}
     ${creativesSection}
     <div class="sec">📋 Meta Campaigns</div><div class="tbl-card"><div class="tbl-scroll"><table><thead><tr><th>Campaign</th><th>Spend</th><th>ROAS</th><th>Purchases</th></tr></thead><tbody>${mc}</tbody></table></div></div>
