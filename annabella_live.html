@@ -404,9 +404,21 @@ function render(d) {
   let discountSection = '';
   const dc = sh && sh.discount_codes;
   if (dc && dc.codes && dc.codes.length) {
+    const escD = x => String(x||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const m2 = n => { const v = +n || 0; return (v < 0 ? '-₪' : '₪') + Math.abs(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); };
+    const exact = dc.basis === 'shopify_analytics_discounts';
+    const head = exact
+      ? '<th>Discount name</th><th>Discounted orders</th><th>Gross sales</th><th>Sales reversals</th><th>Net sales</th><th>Total sales</th>'
+      : '<th>Code</th><th>Orders</th><th>Gross</th><th>Net</th>';
+    const rowHtml = c => exact
+      ? `<td>${escD(c.code)}</td><td class="num">${(c.orders||0).toLocaleString()}</td><td class="num">${m2(c.gross)}</td><td class="num">${m2(c.reversals)}</td><td class="num">${m2(c.net)}</td><td class="num">${m2(c.total)}</td>`
+      : `<td>${escD(c.code)}</td><td class="num">${c.orders}</td><td class="num">${fmt(G(c))}</td><td class="num">${fmt(c.revenue)}</td>`;
+    const sumRow = exact && dc.summary
+      ? `<tr style="background:var(--surface2);font-weight:800"><td><b>Summary</b></td><td class="num">${dc.summary.orders.toLocaleString()}</td><td class="num">${m2(dc.summary.gross)}</td><td class="num">${m2(dc.summary.reversals)}</td><td class="num">${m2(dc.summary.net)}</td><td class="num">${m2(dc.summary.total)}</td></tr>`
+      : '';
     discountSection = `<div class="sec">🏷️ Discount Codes · Shopify</div>
-    <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:10px">${dc.orders_with_code.toLocaleString()} of ${dc.total_orders.toLocaleString()} orders used a code (${dc.total_orders>0?(dc.orders_with_code/dc.total_orders*100).toFixed(0):0}%)</div>
-    <div class="tbl-card"><div class="tbl-scroll"><table><thead><tr><th>Code</th><th>Orders</th><th>Gross</th><th>Net</th></tr></thead><tbody>${dc.codes.map(c=>`<tr><td>${c.code}</td><td class="num">${c.orders}</td><td class="num">${fmt(G(c))}</td><td class="num">${fmt(c.revenue)}</td></tr>`).join('')}</tbody></table></div></div>`;
+    <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:10px">${dc.orders_with_code.toLocaleString()} of ${(dc.total_orders||0).toLocaleString()} orders used a code (${dc.total_orders>0?(dc.orders_with_code/dc.total_orders*100).toFixed(0):0}%)${exact?' · Same calculation as Shopify Analytics › Discounts (sales excl. VAT; Total sales incl. VAT)':''}</div>
+    <div class="tbl-card"><div class="tbl-scroll"><table><thead><tr>${head}</tr></thead><tbody>${sumRow}${dc.codes.map(c=>`<tr>${rowHtml(c)}</tr>`).join('')}</tbody></table></div></div>`;
   }
 
   // Email & SMS marketing (Klaviyo)
