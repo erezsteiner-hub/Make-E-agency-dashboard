@@ -240,6 +240,7 @@ async function loadData() {
     const d = await res.json();
     if (d.error) throw new Error(d.error);
     convertMetaSpendToIls(d, rate);
+    d._usdIls = rate;
     // Blended ROAS depends on total spend, so recompute it now that Meta spend is in ILS
     const totalSpendIls = (d.meta?.spend||0) + (d.google?.spend||0);
     d.blended_roas = totalSpendIls > 0 ? ((d.ga4?.revenue||0) / totalSpendIls).toFixed(2) : 0;
@@ -270,7 +271,7 @@ function render(d) {
   let hl = `<div class="hl-card"><div class="hl-label">${sh?'Gross Revenue (Shopify)':'GA4 Revenue (Website)'}</div><div class="hl-val">${fmt(revenue)}</div><div class="hl-sub">${orders.toLocaleString()} orders${sh?' · before returns':''}</div></div>
     ${sh?`<div class="hl-card"><div class="hl-label">Net Revenue (after returns)</div><div class="hl-val">${fmt(netRev)}</div><div class="hl-sub">Returns ${fmt(returnsAmt)} (${revenue>0?(returnsAmt/revenue*100).toFixed(1):0}%)</div></div>`:''}
     <div class="hl-card"><div class="hl-label">Orders</div><div class="hl-val">${orders.toLocaleString()}</div><div class="hl-sub">${sh?(sh.units||0).toLocaleString()+' units sold':'GA4 transactions'}</div></div>
-    <div class="hl-card"><div class="hl-label">Total Ad Spend</div><div class="hl-val">${fmt(totalSpend)}</div><div class="hl-sub">Meta + Google</div></div>
+    <div class="hl-card"><div class="hl-label">Total Ad Spend</div><div class="hl-val">${fmt(totalSpend)}</div><div class="hl-sub">Meta + Google${d._usdIls && (d.meta?.spend||0)>0 ? ' · Meta USD→₪ at ' + (+d._usdIls).toFixed(3) : ''}</div></div>
     <div class="hl-card"><div class="hl-label">Blended ROAS</div><div class="hl-val">${blended}x</div><div class="hl-sub">${blendedNet!=null?'Gross · net '+blendedNet+'x':'Revenue ÷ Spend'}</div></div>
     ${d.meta?.spend>0?`<div class="hl-card"><div class="hl-label">ROAS Meta</div><div class="hl-val">${(+d.meta.roas||0).toFixed(2)}x</div><div class="hl-sub">As reported by Meta</div></div>`:''}
     ${d.google?.spend>0?`<div class="hl-card"><div class="hl-label">ROAS Google</div><div class="hl-val">${(+d.google.roas||0).toFixed(2)}x</div><div class="hl-sub">As reported by Google</div></div>`:''}
@@ -296,7 +297,7 @@ function render(d) {
     const trans = d.ga4?.transactions || 0;
     const atcPct = (atc / sess * 100);
     const checkoutPct = (checkouts / sess * 100);
-    const crPct = parseFloat(cr);
+    const crPct = +(trans / sess * 100).toFixed(2); // משפך GA4 — רכישות ושיעור מאותו מקור
     const atcW = Math.min(Math.max(atcPct, 3), 100);
     const checkoutW = Math.min(Math.max(checkoutPct, 3), 100);
     const crW = Math.min(Math.max(crPct, 3), 100);
@@ -463,6 +464,7 @@ function render(d) {
 
   document.getElementById('root').innerHTML = `
     <div class="hl-grid">${hl}</div>
+    ${d.meta_data_issue ? `<div class="err" style="margin:14px 0 0;padding:12px 16px;text-align:left;font-size:13px">⚠️ Meta data for this period is still updating — Meta spend and ROAS will refresh shortly.</div>` : ''}
     <div class="sec">📈 Daily Performance Trend</div>
     <div class="grid-2">
       <div class="card"><div class="card-title">Revenue vs Sessions — Daily</div><div class="card-sub">${d.period.from} to ${d.period.to}</div><div class="chart-box"><canvas id="trendC"></canvas></div></div>
