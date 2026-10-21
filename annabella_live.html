@@ -233,11 +233,15 @@ async function loadData() {
   Object.values(charts).forEach(c=>{try{c.destroy()}catch(e){}}); charts={};
 
   try {
-    const [res, rate] = await Promise.all([
-      fetch(`${CONFIG.workerUrl}/?client=${CONFIG.client}&from=${from}&to=${to}`),
-      getUsdToIlsRate()
-    ]);
-    const d = await res.json();
+    const getD = async () => { const r = await fetch(`${CONFIG.workerUrl}/?client=${CONFIG.client}&from=${from}&to=${to}&_=${Date.now()}`); return r.json(); };
+    const ratePromise = getUsdToIlsRate();
+    let d = await getD();
+    // תקלה זמנית במקור הנתונים — ניסיון חוזר לפני הצגה, כדי שלא יוצג 0
+    for (let i = 0; i < 2 && !d.error && (d.meta_source === 'error' || (d.warnings||[]).some(w => /failed|timeout/i.test(w))); i++) {
+      await new Promise(r => setTimeout(r, 2000));
+      d = await getD();
+    }
+    const rate = await ratePromise;
     if (d.error) throw new Error(d.error);
     convertMetaSpendToIls(d, rate);
     d._usdIls = rate;
@@ -464,7 +468,7 @@ function render(d) {
 
   document.getElementById('root').innerHTML = `
     <div class="hl-grid">${hl}</div>
-    ${d.meta_data_issue ? `<div class="err" style="margin:14px 0 0;padding:12px 16px;text-align:left;font-size:13px">⚠️ Meta data for this period is still updating — Meta spend and ROAS will refresh shortly.</div>` : ''}
+    ${d.meta_source === 'error' ? `<div class="err" style="margin:14px 0 0;padding:12px 16px;text-align:left;font-size:13px">⚠️ Meta data could not be loaded right now. <button class="retry" onclick="loadData()">🔄 Try again</button></div>` : ''}
     <div class="sec">📈 Daily Performance Trend</div>
     <div class="grid-2">
       <div class="card"><div class="card-title">Revenue vs Sessions — Daily</div><div class="card-sub">${d.period.from} to ${d.period.to}</div><div class="chart-box"><canvas id="trendC"></canvas></div></div>
