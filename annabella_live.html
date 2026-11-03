@@ -246,7 +246,7 @@ async function loadData() {
     convertMetaSpendToIls(d, rate);
     d._usdIls = rate;
     // Blended ROAS depends on total spend, so recompute it now that Meta spend is in ILS
-    const totalSpendIls = (d.meta?.spend||0) + (d.google?.spend||0);
+    const totalSpendIls = (d.meta?.spend||0) + (d.google?.spend||0) + (d.chatgpt?.spend||0);
     d.blended_roas = totalSpendIls > 0 ? ((d.ga4?.revenue||0) / totalSpendIls).toFixed(2) : 0;
     render(d);
   } catch (e) {
@@ -258,7 +258,7 @@ const fmt = n => '₪' + Math.round(n||0).toLocaleString('en-US');
 const rClass = r => r>=4?'c-green':r>=2?'c-yellow':'c-red';
 
 function render(d) {
-  const totalSpend = (d.meta?.spend||0) + (d.google?.spend||0);
+  const totalSpend = (d.meta?.spend||0) + (d.google?.spend||0) + (d.chatgpt?.spend||0);
   // Shopify = מקור אמת; אם אין בו הזמנות לתקופה (למשל מעבר ל-60 יום בלי read_all_orders) אבל ב-GA4 יש — חוזרים ל-GA4
   const sh = (d.shopify && !(d.shopify.orders === 0 && (d.ga4?.transactions||0) > 0)) ? d.shopify : null;
   const G = x => (x && x.gross != null) ? x.gross : (x ? x.revenue : 0);   // ברוטו לפני החזרות, עם חזרה לנטו
@@ -275,10 +275,11 @@ function render(d) {
   let hl = `<div class="hl-card"><div class="hl-label">${sh?'Gross Revenue (Shopify)':'GA4 Revenue (Website)'}</div><div class="hl-val">${fmt(revenue)}</div><div class="hl-sub">${orders.toLocaleString()} orders${sh?' · before returns':''}</div></div>
     ${sh?`<div class="hl-card"><div class="hl-label">Net Revenue (after returns)</div><div class="hl-val">${fmt(netRev)}</div><div class="hl-sub">Returns ${fmt(returnsAmt)} (${revenue>0?(returnsAmt/revenue*100).toFixed(1):0}%)</div></div>`:''}
     <div class="hl-card"><div class="hl-label">Orders</div><div class="hl-val">${orders.toLocaleString()}</div><div class="hl-sub">${sh?(sh.units||0).toLocaleString()+' units sold':'GA4 transactions'}</div></div>
-    <div class="hl-card"><div class="hl-label">Total Ad Spend</div><div class="hl-val">${fmt(totalSpend)}</div><div class="hl-sub">Meta + Google${d._usdIls && (d.meta?.spend||0)>0 ? ' · Meta USD→₪ at ' + (+d._usdIls).toFixed(3) : ''}</div></div>
+    <div class="hl-card"><div class="hl-label">Total Ad Spend</div><div class="hl-val">${fmt(totalSpend)}</div><div class="hl-sub">Meta + Google${(d.chatgpt?.spend||0)>0?' + ChatGPT':''}${d._usdIls && (d.meta?.spend||0)>0 ? ' · Meta USD→₪ at ' + (+d._usdIls).toFixed(3) : ''}</div></div>
     <div class="hl-card"><div class="hl-label">Blended ROAS</div><div class="hl-val">${blended}x</div><div class="hl-sub">${blendedNet!=null?'Gross · net '+blendedNet+'x':'Revenue ÷ Spend'}</div></div>
     ${d.meta?.spend>0?`<div class="hl-card"><div class="hl-label">ROAS Meta</div><div class="hl-val">${(+d.meta.roas||0).toFixed(2)}x</div><div class="hl-sub">As reported by Meta</div></div>`:''}
     ${d.google?.spend>0?`<div class="hl-card"><div class="hl-label">ROAS Google</div><div class="hl-val">${(+d.google.roas||0).toFixed(2)}x</div><div class="hl-sub">As reported by Google</div></div>`:''}
+    ${d.chatgpt?.spend>0 && d.chatgpt.conversions_available?`<div class="hl-card"><div class="hl-label">ROAS ChatGPT</div><div class="hl-val">${(+d.chatgpt.roas||0).toFixed(2)}x</div><div class="hl-sub">As reported by ChatGPT Ads</div></div>`:''}
     <div class="hl-card"><div class="hl-label">Sessions</div><div class="hl-val">${((d.ga4?.sessions||0)/1000).toFixed(1)}K</div><div class="hl-sub">${cr}% conversion</div></div>
     <div class="hl-card"><div class="hl-label">Average Order Value (AOV)</div><div class="hl-val">${fmt(aov)}</div><div class="hl-sub">Revenue ÷ Orders</div></div>`;
 
@@ -356,6 +357,13 @@ function render(d) {
   let gcSection = '';
   if (gc.length) {
     gcSection = `<div class="sec">📋 Google Ads Campaigns</div><div class="tbl-card"><div class="tbl-scroll"><table><thead><tr><th>Campaign</th><th>Type</th><th>Spend</th><th>ROAS</th></tr></thead><tbody>${gc.map(c=>`<tr><td>${c.name}</td><td><span class="tag tag-${c.type}">${c.type==='brand'?'Brand':'Non-Brand'}</span></td><td class="num">${fmt(c.spend)}</td><td><span class="chip ${rClass(c.roas)}">${(c.roas||0).toFixed(1)}x</span></td></tr>`).join('')}</tbody></table></div></div>`;
+  }
+
+  // ChatGPT Ads — קמפיינים (רק כשיש בלוק chatgpt מה-Worker)
+  const cgc = d.chatgpt?.campaigns || [];
+  if (cgc.length) {
+    const cgConv = d.chatgpt.conversions_available;
+    gcSection += `<div class="sec">🤖 ChatGPT Ads Campaigns</div>${cgConv?'':`<div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:10px">No conversion data (no conversion pixel attached to campaigns)</div>`}<div class="tbl-card"><div class="tbl-scroll"><table><thead><tr><th>Campaign</th><th>Spend</th><th>Clicks</th><th>CPC</th><th>Purchases</th><th>ROAS</th></tr></thead><tbody>${cgc.map(x=>`<tr><td>${String(x.name||'').replace(/</g,'&lt;')}</td><td class="num">${fmt(x.spend)}</td><td class="num">${(x.clicks||0).toLocaleString()}</td><td class="num">₪${x.clicks>0?(x.spend/x.clicks).toFixed(2):'0'}</td><td class="num">${cgConv?Math.round(x.purch||0):'—'}</td><td>${cgConv?`<span class="chip ${rClass(x.roas)}">${(x.roas||0).toFixed(2)}x</span>`:'—'}</td></tr>`).join('')}</tbody></table></div></div>`;
   }
 
   // Best Sellers (top products)
@@ -452,17 +460,19 @@ function render(d) {
   }
 
   // הוצאה לפי פלטפורמה — ריבועים
-  const platTotal = (d.meta?.spend||0) + (d.google?.spend||0);
+  const platTotal = (d.meta?.spend||0) + (d.google?.spend||0) + (d.chatgpt?.spend||0);
   const platDefs = [
     {key:'meta', name:'Meta', color:'#0866ff', purch: d.meta?.purch},
     {key:'google', name:'Google', color:'#ea4335', purch: null},
+    {key:'chatgpt', name:'ChatGPT', color:'#10a37f', purch: d.chatgpt?.purch ?? null},
   ];
   const platBoxes = platTotal > 0 ? `<div class="plat-grid">${platDefs.filter(p => (d[p.key]?.spend||0) > 0).map(p => {
     const sp = d[p.key].spend, roas = +d[p.key].roas || 0, share = sp / platTotal * 100;
     return `<div class="plat-box" style="--pc:${p.color}"><div class="plat-name">${p.name}<span class="plat-share">${share.toFixed(0)}% of spend</span></div>
       <div class="plat-spend">${fmt(sp)}</div><div class="plat-bar"><div style="width:${share}%"></div></div>
-      <div class="plat-row"><span>ROAS</span><span>${roas.toFixed(2)}x</span></div>
-      <div class="plat-row"><span>Revenue (platform-reported)</span><span>${fmt(d[p.key].value!=null ? d[p.key].value : sp*roas)}</span></div>
+      ${p.key==='chatgpt' && d.chatgpt.value==null ? `<div class="plat-row"><span>Clicks</span><span>${(d.chatgpt.clicks||0).toLocaleString()}</span></div>
+      <div class="plat-row"><span>Cost per click (CPC)</span><span>₪${(+d.chatgpt.cpc||0).toFixed(2)}</span></div>` : `<div class="plat-row"><span>ROAS</span><span>${roas.toFixed(2)}x</span></div>
+      <div class="plat-row"><span>Revenue (platform-reported)</span><span>${fmt(d[p.key].value!=null ? d[p.key].value : sp*roas)}</span></div>`}
       ${p.purch!=null?`<div class="plat-row"><span>Purchases</span><span>${Math.round(p.purch).toLocaleString()}</span></div>`:''}</div>`;
   }).join('')}</div>` : `<div style="color:var(--muted);text-align:center;padding:20px">No spend in period</div>`;
 
@@ -472,7 +482,7 @@ function render(d) {
     <div class="sec">📈 Daily Performance Trend</div>
     <div class="grid-2">
       <div class="card"><div class="card-title">Revenue vs Sessions — Daily</div><div class="card-sub">${d.period.from} to ${d.period.to}</div><div class="chart-box"><canvas id="trendC"></canvas></div></div>
-      <div class="card"><div class="card-title">Spend by Platform</div><div class="card-sub">Meta vs Google</div>${platBoxes}</div>
+      <div class="card"><div class="card-title">Spend by Platform</div><div class="card-sub">Meta vs Google${(d.chatgpt?.spend||0)>0?' · ChatGPT':''}</div>${platBoxes}</div>
     </div>
     ${bn}
     ${funnelHtml}

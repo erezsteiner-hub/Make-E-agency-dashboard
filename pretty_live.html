@@ -211,16 +211,17 @@ const fmt = n => '₪' + Math.round(n||0).toLocaleString('he-IL');
 const rClass = r => r>=4?'c-green':r>=2?'c-yellow':'c-red';
 
 function render(d) {
-  const totalSpend = (d.meta?.spend||0) + (d.google?.spend||0);
+  const totalSpend = (d.meta?.spend||0) + (d.google?.spend||0) + (d.chatgpt?.spend||0);
   const cr = d.ga4?.sessions > 0 ? (d.ga4.transactions/d.ga4.sessions*100).toFixed(2) : 0;
   const aov = d.ga4?.transactions > 0 ? (d.ga4.revenue / d.ga4.transactions) : 0;
 
   // Highlights
   let hl = `<div class="hl-card"><div class="hl-label">הכנסות GA4 (אתר)</div><div class="hl-val">${fmt(d.ga4?.revenue)}</div><div class="hl-sub">${(d.ga4?.transactions||0).toLocaleString()} עסקאות</div></div>
-    <div class="hl-card"><div class="hl-label">סך הוצאות פרסום</div><div class="hl-val">${fmt(totalSpend)}</div><div class="hl-sub">Meta + Google</div></div>
+    <div class="hl-card"><div class="hl-label">סך הוצאות פרסום</div><div class="hl-val">${fmt(totalSpend)}</div><div class="hl-sub">Meta + Google${(d.chatgpt?.spend||0)>0?' + ChatGPT':''}</div></div>
     <div class="hl-card"><div class="hl-label">ROAS משולב</div><div class="hl-val">${d.blended_roas||0}x</div><div class="hl-sub">הכנסות ÷ הוצאות</div></div>
     ${d.meta?.spend>0?`<div class="hl-card"><div class="hl-label">ROAS Meta</div><div class="hl-val">${(+d.meta.roas||0).toFixed(2)}x</div><div class="hl-sub">לפי דיווח Meta</div></div>`:''}
     ${d.google?.spend>0?`<div class="hl-card"><div class="hl-label">ROAS Google</div><div class="hl-val">${(+d.google.roas||0).toFixed(2)}x</div><div class="hl-sub">לפי דיווח Google</div></div>`:''}
+    ${d.chatgpt?.spend>0 && d.chatgpt.conversions_available?`<div class="hl-card"><div class="hl-label">ROAS ChatGPT</div><div class="hl-val">${(+d.chatgpt.roas||0).toFixed(2)}x</div><div class="hl-sub">לפי דיווח ChatGPT</div></div>`:''}
     <div class="hl-card"><div class="hl-label">סשנים</div><div class="hl-val">${((d.ga4?.sessions||0)/1000).toFixed(1)}K</div><div class="hl-sub">${cr}% המרה</div></div>
     <div class="hl-card"><div class="hl-label">שווי הזמנה ממוצע (AOV)</div><div class="hl-val">${fmt(aov)}</div><div class="hl-sub">הכנסות ÷ עסקאות</div></div>`;
 
@@ -289,6 +290,13 @@ function render(d) {
     gcSection = `<div class="sec">📋 קמפייני Google Ads</div><div class="tbl-card"><div class="tbl-scroll"><table><thead><tr><th>קמפיין</th><th>סוג</th><th>הוצאה</th><th>ROAS</th></tr></thead><tbody>${gc.map(c=>`<tr><td>${c.name}</td><td><span class="tag tag-${c.type}">${c.type==='brand'?'Brand':'Non-Brand'}</span></td><td class="num">${fmt(c.spend)}</td><td><span class="chip ${rClass(c.roas)}">${(c.roas||0).toFixed(1)}x</span></td></tr>`).join('')}</tbody></table></div></div>`;
   }
 
+  // ChatGPT Ads — קמפיינים (רק כשיש בלוק chatgpt מה-Worker)
+  const cgc = d.chatgpt?.campaigns || [];
+  if (cgc.length) {
+    const cgConv = d.chatgpt.conversions_available;
+    gcSection += `<div class="sec">🤖 קמפייני ChatGPT Ads</div>${cgConv?'':`<div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:10px">אין נתוני המרות (לא הוגדר פיקסל המרות בקמפיינים)</div>`}<div class="tbl-card"><div class="tbl-scroll"><table><thead><tr><th>קמפיין</th><th>הוצאה</th><th>קליקים</th><th>CPC</th><th>רכישות</th><th>ROAS</th></tr></thead><tbody>${cgc.map(x=>`<tr><td>${String(x.name||'').replace(/</g,'&lt;')}</td><td class="num">${fmt(x.spend)}</td><td class="num">${(x.clicks||0).toLocaleString()}</td><td class="num">₪${x.clicks>0?(x.spend/x.clicks).toFixed(2):'0'}</td><td class="num">${cgConv?Math.round(x.purch||0):'—'}</td><td>${cgConv?`<span class="chip ${rClass(x.roas)}">${(x.roas||0).toFixed(2)}x</span>`:'—'}</td></tr>`).join('')}</tbody></table></div></div>`;
+  }
+
   // דוח חדש 1 — Best Seller (טופ מוצרים)
   const products = d.top_products || [];
   let productsSection = '';
@@ -325,17 +333,19 @@ function render(d) {
   }
 
   // הוצאה לפי פלטפורמה — ריבועים
-  const platTotal = (d.meta?.spend||0) + (d.google?.spend||0);
+  const platTotal = (d.meta?.spend||0) + (d.google?.spend||0) + (d.chatgpt?.spend||0);
   const platDefs = [
     {key:'meta', name:'Meta', color:'#0866ff', purch: d.meta?.purch},
     {key:'google', name:'Google', color:'#ea4335', purch: null},
+    {key:'chatgpt', name:'ChatGPT', color:'#10a37f', purch: d.chatgpt?.purch ?? null},
   ];
   const platBoxes = platTotal > 0 ? `<div class="plat-grid">${platDefs.filter(p => (d[p.key]?.spend||0) > 0).map(p => {
     const sp = d[p.key].spend, roas = +d[p.key].roas || 0, share = sp / platTotal * 100;
     return `<div class="plat-box" style="--pc:${p.color}"><div class="plat-name">${p.name}<span class="plat-share">${share.toFixed(0)}% מההוצאה</span></div>
       <div class="plat-spend">${fmt(sp)}</div><div class="plat-bar"><div style="width:${share}%"></div></div>
-      <div class="plat-row"><span>ROAS</span><span>${roas.toFixed(2)}x</span></div>
-      <div class="plat-row"><span>הכנסה (דיווח פלטפורמה)</span><span>${fmt(d[p.key].value!=null ? d[p.key].value : sp*roas)}</span></div>
+      ${p.key==='chatgpt' && d.chatgpt.value==null ? `<div class="plat-row"><span>קליקים</span><span>${(d.chatgpt.clicks||0).toLocaleString()}</span></div>
+      <div class="plat-row"><span>עלות לקליק (CPC)</span><span>₪${(+d.chatgpt.cpc||0).toFixed(2)}</span></div>` : `<div class="plat-row"><span>ROAS</span><span>${roas.toFixed(2)}x</span></div>
+      <div class="plat-row"><span>הכנסה (דיווח פלטפורמה)</span><span>${fmt(d[p.key].value!=null ? d[p.key].value : sp*roas)}</span></div>`}
       ${p.purch!=null?`<div class="plat-row"><span>רכישות</span><span>${Math.round(p.purch).toLocaleString()}</span></div>`:''}</div>`;
   }).join('')}</div>` : `<div style="color:var(--muted);text-align:center;padding:20px">אין הוצאה בתקופה</div>`;
 
@@ -344,7 +354,7 @@ function render(d) {
     <div class="sec">📈 מגמת ביצועים יומית</div>
     <div class="grid-2">
       <div class="card"><div class="card-title">הכנסות מול סשנים — יומי</div><div class="card-sub">${d.period.from} עד ${d.period.to}</div><div class="chart-box"><canvas id="trendC"></canvas></div></div>
-      <div class="card"><div class="card-title">הוצאה לפי פלטפורמה</div><div class="card-sub">Meta מול Google</div>${platBoxes}</div>
+      <div class="card"><div class="card-title">הוצאה לפי פלטפורמה</div><div class="card-sub">Meta מול Google${(d.chatgpt?.spend||0)>0?' · ChatGPT':''}</div>${platBoxes}</div>
     </div>
     ${bn}
     ${funnelHtml}
