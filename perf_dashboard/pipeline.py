@@ -289,6 +289,11 @@ def run_client(key, c, args, now):
     meta_c = got["meta_ad_daily"][1]
     # history shown = what is fully cached for the paid channels (back-fill continues next runs)
     start = max(start, meta_c.covered_from(asof), got["google_daily"][1].covered_from(asof), got["ga4_paid"][1].covered_from(asof))
+    # client with a short history (e.g. GA4 / ads started recently): begin at the first day with any data
+    g4 = got["ga4_daily"][1]
+    first = min([k for k, v in g4.d.items() if k >= str(start) and any(float(r.get("sessions") or 0) > 0 for r in v)] +
+                [k for k, v in meta_c.d.items() if k >= str(start) and v] + [str(asof)])
+    start = max(start, dt.date.fromisoformat(first))
 
     # check: ad-level spend vs account-level spend (last 14 days)
     try:
@@ -385,6 +390,7 @@ def run_client(key, c, args, now):
                 cur += dt.timedelta(1)
             cfg["store_daily"] = sd
             cfg["store_daily_note"] = "הזמנות בשופיפיי, נטו אחרי החזרות"
+            cfg["store_label"] = "שופיפיי"
             m1 = str(asof.replace(day=1))
             last_full = str(asof - dt.timedelta(1)) if partial else str(asof)
             if first <= m1:

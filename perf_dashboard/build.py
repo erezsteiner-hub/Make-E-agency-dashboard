@@ -177,6 +177,9 @@ out = dict(chatgpt=chat, client=cfg["client"], updated=cfg["updated"], asof=asof
            items=dict(names=names, cat=[itemCat[i] for i in range(len(names))], cats=cats,
                       weeks=weeks, rows=witems, days=dl, drows=ditems))
 t = open(cfg["template"]).read()
+if cfg.get("store_label"):   # e.g. "שופיפיי" instead of "קופה" (register) – not inside words like "תקופה"
+    import re
+    t = re.sub(r"(?<![\u0590-\u05FF])ה?קופה(?![\u0590-\u05FF])", cfg["store_label"], t)
 title = f'{cfg["client"]["name"]} · מדד ביצועים'
 html = t.replace("__TITLE__", title).replace("__DATA__", json.dumps(out, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/"))
 open(cfg["out"], "w").write(html)
