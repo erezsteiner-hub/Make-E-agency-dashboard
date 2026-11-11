@@ -1,0 +1,15 @@
+{
+  "_note": "Per-client performance dashboard. 'v' = link version: raise it to revoke a client's link (old link stops working, new link is emailed). Shopify clients use Shopify as revenue source; others GA4.",
+  "clients": {
+    "crazy": {"v": 1, "name": "קרייזי ליין", "name_en": "CRAZY LINE", "domain": "crazyline.com",
+              "meta": "2562301110668961", "google": "654-753-2446", "ga4": "454540408"},
+    "pablo": {"v": 1, "name": "PABLO", "name_en": "PABLO DOGS", "domain": "pablodogs.com",
+              "meta": "661581863643798", "google": "178-480-5862", "ga4": "554232841",
+              "shopify": "nwxiec-eq.myshopify.com"},
+    "annabella": {"v": 1, "name": "אנאבלה", "name_en": "ANNABELLA", "domain": "annabella-pump.co.il",
+                  "meta": "1247794652730158", "meta_currency": "USD", "google": "490-285-3125", "ga4": "354304809",
+                  "shopify": "annabellapump.myshopify.com", "chatgpt_worker": "annabella"},
+    "pretty": {"v": 1, "name": "פריטי בלרינס", "name_en": "PRETTY BALLERINAS",
+               "meta": "708681422636732", "google": "477-626-3831", "ga4": "152370243", "chatgpt_worker": "pretty"}
+  }
+}

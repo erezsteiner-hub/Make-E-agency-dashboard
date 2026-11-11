@@ -1,0 +1,444 @@
+<title>__TITLE__</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Rubik:wght@500;600;700&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* Layout: one reading column, sticky pill nav, numbered sections that mirror the meeting agenda; data cells shaded by rank */
+:root{
+  --bg:#f6f5fb; --panel:#ffffff; --ink:#17142a; --muted:#6b6782; --line:#e4e1f0;
+  --accent:#5b2be0; --accent-soft:#ece6ff; --accent-ink:#ffffff;
+  --good:#1f8a5b; --good-soft:#e3f4ec; --warn:#b26a00; --warn-soft:#fff2dd; --bad:#c23a3a; --bad-soft:#fde8e8;
+  --c1:91,43,224; --c2:31,138,91; --c3:214,110,24; --c4:36,120,200; --c5:186,58,120; --c6:110,90,40;
+  --f-display:"Rubik","Assistant",system-ui,sans-serif; --f-body:"Assistant",system-ui,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12101c; --panel:#1b1829; --ink:#efecfa; --muted:#a29cbc; --line:#2d2942;
+  --accent:#9b7bff; --accent-soft:#2a2350; --accent-ink:#12101c;
+  --good:#4cc792; --good-soft:#163428; --warn:#f0a940; --warn-soft:#3a2a10; --bad:#ff7b7b; --bad-soft:#3d1a1d;
+  --c1:155,123,255; --c2:76,199,146; --c3:240,150,70; --c4:100,170,240; --c5:235,110,170; --c6:200,175,110; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12101c; --panel:#1b1829; --ink:#efecfa; --muted:#a29cbc; --line:#2d2942;
+  --accent:#9b7bff; --accent-soft:#2a2350; --accent-ink:#12101c;
+  --good:#4cc792; --good-soft:#163428; --warn:#f0a940; --warn-soft:#3a2a10; --bad:#ff7b7b; --bad-soft:#3d1a1d;
+  --c1:155,123,255; --c2:76,199,146; --c3:240,150,70; --c4:100,170,240; --c5:235,110,170; --c6:200,175,110; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;direction:rtl}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:1180px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;padding-bottom:16px;border-bottom:2px solid var(--ink)}
+.brand{display:flex;flex-direction:column;gap:2px}
+.brand small{color:var(--muted);font-size:13px;letter-spacing:.04em}
+h1{font-family:var(--f-display);font-weight:700;font-size:clamp(24px,4vw,34px);margin:0;letter-spacing:-.01em;text-wrap:balance}
+.stamp{font-size:13px;color:var(--muted);text-align:left}
+.stamp b{color:var(--ink)}
+nav.pills{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;gap:8px;overflow-x:auto;padding:12px 0;margin-bottom:8px;border-bottom:1px solid var(--line)}
+nav.pills a{flex:none;text-decoration:none;color:var(--ink);font-weight:600;font-size:14px;padding:6px 14px;border:1px solid var(--line);border-radius:999px;background:var(--panel)}
+nav.pills a:hover,nav.pills a:focus-visible{border-color:var(--accent);color:var(--accent);outline:none}
+section{padding-block:22px 6px;scroll-margin-top:70px}
+.sh{display:flex;align-items:baseline;gap:12px;margin-bottom:4px}
+.sh .num{font-family:var(--f-display);font-weight:700;color:var(--accent);font-size:14px;border:1.5px solid var(--accent);border-radius:6px;padding:0 7px}
+h2{font-family:var(--f-display);font-weight:600;font-size:22px;margin:0}
+.src{color:var(--muted);font-size:13px;margin:2px 0 14px;max-width:80ch}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.kpi .lab{font-size:13px;color:var(--muted);font-weight:600}
+.kpi .val{font-family:var(--f-display);font-weight:700;font-size:28px;font-variant-numeric:tabular-nums;line-height:1.1}
+.kpi .sub{font-size:13px;color:var(--muted)}
+.kpi.big{grid-column:span 2}
+@media (max-width:560px){.kpi.big{grid-column:auto}}
+.bar{position:relative;height:9px;border-radius:5px;background:var(--line);overflow:visible;margin-top:4px}
+.bar i{position:absolute;inset:0 0 0 auto;border-radius:5px;background:var(--accent)}
+.bar b{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink)}
+.chip{display:inline-block;font-size:12px;font-weight:700;padding:1px 8px;border-radius:999px}
+.chip.good{background:var(--good-soft);color:var(--good)} .chip.warn{background:var(--warn-soft);color:var(--warn)} .chip.bad{background:var(--bad-soft);color:var(--bad)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0}
+.chartbox{position:relative;height:260px}
+.seg{display:inline-flex;flex-wrap:wrap;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:3px;margin-bottom:10px}
+.seg button{font:inherit;font-size:13px;font-weight:600;border:0;background:transparent;color:var(--muted);padding:5px 12px;border-radius:6px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.tw{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;font-variant-numeric:tabular-nums}
+th,td{padding:7px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+th{font-size:12px;color:var(--muted);font-weight:700;position:relative;background:var(--panel)}
+th[data-k]::after{content:"";position:absolute;right:10px;left:10px;bottom:0;height:3px;border-radius:2px;background:rgb(var(--h))}
+td.n{direction:ltr;text-align:left}
+td.name{max-width:340px;overflow:hidden;text-overflow:ellipsis}
+tr.tot td{font-weight:800;border-top:2px solid var(--ink);border-bottom:0}
+tr.lvl1 td.name{padding-right:26px;color:var(--muted)}
+tr.click{cursor:pointer}
+tr.click td.name::before{content:"▸ ";color:var(--accent)}
+tr.click.open td.name::before{content:"▾ "}
+.note{font-size:12.5px;color:var(--muted);margin:8px 2px 0}
+.two{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr))}
+h3{font-family:var(--f-display);font-size:16px;font-weight:600;margin:6px 0 8px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin:4px 0 10px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:14px;height:3px;border-radius:2px;display:inline-block}
+footer{margin-top:30px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+<style>
+.guide{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--muted);margin:14px 0 0}
+.guide b{color:var(--ink)}
+.ctrl{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin-bottom:10px}
+.ctrl .seg{margin-bottom:0}
+.ctrl label{font-size:13px;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+.ctrl input,.ctrl select{font:inherit;font-size:13px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 6px}
+.rng{font-size:12.5px;color:var(--muted)}
+.chip.flat{background:var(--line);color:var(--muted)}
+td .chip{margin-inline-start:6px;font-size:11px}
+tr.lvl2 td.name{padding-right:44px;color:var(--muted);font-size:12.5px}
+tr.click.lvl1 td.name::before{content:"▸ "}
+tr.click.lvl1.open td.name::before{content:"▾ "}
+.part{color:var(--warn);font-size:11.5px;font-weight:700}
+</style>
+
+<div class="wrap">
+<header class="top">
+  <div class="brand"><small id="brandLine"></small><h1 id="pageH1"></h1></div>
+  <div class="stamp" id="stamp"></div>
+</header>
+<p class="guide"><b>איך לקרוא את הטבלאות:</b> לכל מדד צבע משלו (הפס מתחת לכותרת העמודה). ככל שהתא כהה יותר, הערך טוב יותר ביחס לשאר השורות. ב-CPA וב-CPC הפוך: נמוך = כהה. בהוצאה: כהה = יותר כסף. שורה שמסומנת "חלקי" היא היום, עד שעת העדכון.</p>
+<nav class="pills" aria-label="ניווט">
+  <a href="#month" id="monthPill">החודש מול היעד</a><a href="#site">אתר יום-יום</a><a href="#funnel">משפך</a><a href="#meta">מטא</a><a href="#google">גוגל</a><a href="#chatgpt">ChatGPT</a><a href="#products">מוצרים</a>
+</nav>
+
+<section id="month">
+  <div class="sh"><span class="num">1</span><h2 id="monthH2">החודש מול היעד</h2></div>
+  <p class="src" id="monthSrc"></p>
+  <div class="grid" id="kpis"></div>
+  <div class="panel" style="margin-top:12px">
+    <h3>הכנסה יומית מול השקעה · 30 ימים</h3>
+    <div class="legend"><span id="lgStore"><i style="background:rgb(var(--c5))"></i>פדיון קופה (בימים שהתקבלו)</span><span><i style="background:rgb(var(--c1))"></i>הכנסות אתר (GA4)</span><span><i style="background:rgb(var(--c3))"></i>אותו תאריך אשתקד (GA4)</span><span><i style="background:rgb(var(--c2))"></i>השקעת מדיה</span></div>
+    <div class="chartbox"><canvas id="revChart" aria-label="גרף הכנסה יומית מול השקעה"></canvas></div>
+  </div>
+</section>
+
+<section id="site">
+  <div class="sh"><span class="num">2</span><h2>ביצועי האתר יום-יום</h2></div>
+  <p class="src"><span id="storeSrc"></span>הוצאה: Meta + Google Ads · הזמנות, הכנסה, סשנים, צפיות במוצרים, הוספות לסל וצ׳קאאוטים: GA4 · AOV = הכנסה / הזמנות · אחוז המרה = הזמנות / סשנים · MER = הכנסה / הוצאה סה״כ · MER קופה = פדיון קופה / הוצאה</p>
+  <div class="ctrl" data-for="site"></div>
+  <div class="tw"><table id="siteT"></table></div>
+</section>
+
+<section id="funnel">
+  <div class="sh"><span class="num">3</span><h2>משפך ההמרה</h2></div>
+  <p class="src">GA4 · צפיות במוצרים = view_item · הוספות לסל = add_to_cart · צ׳קאאוטים = begin_checkout · רכישות = purchase. כל אחוז מחושב מהשלב הקודם.</p>
+  <div class="ctrl" data-for="funnel"></div>
+  <div class="tw"><table id="funT"></table></div>
+</section>
+
+<section id="meta">
+  <div class="sh"><span class="num">4</span><h2>מטא</h2></div>
+  <p class="src">הוצאה, רכישות, ערך רכישה, CTR ו-CPC: Meta Ads (ייחוס ברירת המחדל של החשבון) · הכנסה GA4: לפי שם הקמפיין ב-UTM של מטא (fb / ig paid), ברמת קמפיין בלבד · MER (GA4) = הכנסה GA4 / הוצאה על הקמפיין</p>
+  <div class="ctrl" data-for="meta"></div>
+  <div class="tw"><table id="metaT"></table></div>
+  <p class="note">▸ בקמפיין פותח את קבוצות המודעות, ▸ בקבוצה פותח את המודעות. CTR = קליקים יוצאים / חשיפות · CPC = הוצאה / קליק יוצא · ROAS מטא כולל ייחוס מצפייה, ולכן גבוה מ-GA4. ההחלטות מתקבלות לפי MER והכנסות האתר.</p>
+</section>
+
+<section id="google">
+  <div class="sh"><span class="num">5</span><h2>גוגל</h2></div>
+  <p class="src">הוצאה, קליקים, המרות וערך המרה: Google Ads · ROAS = ערך המרה / הוצאה · הכנסה GA4: לפי שם הקמפיין (google / cpc). קמפיין הברנד נמדד בנפרד, כי מי שמחפש את שם המותג כבר מכיר אותו.</p>
+  <div class="ctrl" data-for="google"></div>
+  <div class="tw"><table id="gooT"></table></div>
+</section>
+
+<section id="chatgpt">
+  <div class="sh"><span class="num">6</span><h2>ChatGPT</h2></div>
+  <p class="src">הוצאה, חשיפות, קליקים והמרות: מנהל המודעות של OpenAI (ייצוא ידני) · כניסות, מעורבות, הוספות לסל, רכישות והכנסה: GA4 לפי שם הקמפיין · ההוצאה כאן לא נכללת בהוצאה סה״כ ובחישובי ה-MER למעלה</p>
+  <div class="ctrl" data-for="chatgpt"></div>
+  <div class="tw"><table id="chatT"></table></div>
+  <p class="note"><span id="chatNote"></span>OpenAI סופרת המרה עד 30 יום אחרי קליק ולפעמים גם אחרי צפייה, ו-GA4 לפי הכניסה האחרונה, ולכן המספרים שונים.</p>
+</section>
+
+<section id="products">
+  <div class="sh"><span class="num">7</span><h2>מוצרים</h2></div>
+  <p class="src" id="prodSrc"></p>
+  <div class="ctrl" id="prodCtrl"></div>
+  <p class="rng" id="prodRange"></p>
+  <h3>30 המוצרים המובילים בהכנסות</h3>
+  <div class="tw"><table id="topT"></table></div>
+  <h3 style="margin-top:16px">קולקציות</h3>
+  <div class="tw"><table id="catT"></table></div>
+  <div class="two" style="margin-top:16px">
+    <div style="min-width:0"><h3>הכי צומחים · ₪</h3><div class="tw"><table id="riseAbsT"></table></div></div>
+    <div style="min-width:0"><h3>הכי צומחים · %</h3><div class="tw"><table id="risePctT"></table></div><p class="note" id="riseNote"></p></div>
+  </div>
+  <div class="two" style="margin-top:16px">
+    <div style="min-width:0"><h3>ממירים טוב, חשופים מעט</h3><div class="tw"><table id="potT"></table></div><p class="note" id="potNote"></p></div>
+    <div style="min-width:0"><h3>הרבה צפיות, מעט רכישות</h3><div class="tw"><table id="leakT"></table></div><p class="note" id="leakNote"></p></div>
+  </div>
+  <p class="note" id="prodFoot"></p>
+</section>
+
+<footer><span>MAKE-E Digital · makeedigital.com</span><span id="foot"></span></footer>
+</div>
+
+<script type="application/json" id="data">__DATA__</script>
+<script>
+(function(){
+const D=JSON.parse(document.getElementById('data').textContent);
+const C=D.client||{}, CUR=C.currency||'₪';
+const fmt=(n,d=0)=>n==null||!isFinite(n)?'—':Number(n).toLocaleString('he-IL',{minimumFractionDigits:d,maximumFractionDigits:d});
+const ils=(n,d=0)=>n==null||!isFinite(n)?'—':(n<0?'-':'')+CUR+fmt(Math.abs(n),d);
+const pct=(n,d=1)=>n==null||!isFinite(n)?'—':(n*100).toFixed(d)+'%';
+const div=(a,b)=>b?a/b:null;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const dmy=s=>{const [y,m,d]=s.split('-');return (+d)+'.'+(+m)};
+const wd=s=>['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'][new Date(s+'T12:00:00').getDay()];
+const days=D.days, N=days.length, ASOF=D.asof, PART=D.partialToday;
+const LAST=PART?N-2:N-1;                       // last full day
+const sum=(a,k)=>a.reduce((s,x)=>s+(x[k]||0),0);
+const HAS_STORE=D.days.some(x=>x.srev!=null);
+const partLbl=d=>PART&&d===ASOF?' <span class="part">חלקי</span>':'';
+
+document.getElementById('brandLine').textContent=(C.name_en||'')+(C.domain?' · '+C.domain:'');
+document.getElementById('pageH1').textContent='מדד ביצועים · '+(C.month||'');
+const [ud,ut]=D.updated.split('T');
+document.getElementById('stamp').innerHTML=`עודכן <b>${dmy(ud)}.${ud.slice(0,4)}${ut?' · '+ut:''}</b><br>`+(PART?'כולל היום עד שעת העדכון':'נתונים עד '+dmy(ASOF))+` · היסטוריה מ-${dmy(days[0].d)}.${days[0].d.slice(0,4)}`;
+document.getElementById('foot').textContent='מקורות: GA4, Meta Ads, Google Ads (דרך Windsor)';
+
+// ---------- 1. MTD (full days only) ----------
+const L=days[LAST].d, T=D.targets||{}, hasT=k=>T[k]!=null&&T[k]>0;
+const mtd=days.slice(0,LAST+1).filter(x=>x.d>=L.slice(0,8)+'01');
+const n=mtd.length, DAYS=new Date(+L.slice(0,4),+L.slice(5,7),0).getDate(), frac=n/DAYS;
+if(!HAS_STORE){const l=document.getElementById('lgStore');if(l)l.remove()}
+document.getElementById('storeSrc').textContent=days.some(x=>x.srev!=null)?`פדיון ועסקאות קופה: ${(D.storeDailyNote||'נתוני הקופה של הלקוח')}, רק בימים שהתקבלו · `:'';
+const SM=D.storeMtd, gRev=sum(mtd,'rev'), gOrd=sum(mtd,'ord');
+const rev=SM?SM.rev:gRev, ord=SM?SM.ord:gOrd, spM=sum(mtd,'meta'), spG=sum(mtd,'goo'), sp=spM+spG, ly=SM?SM.ly:sum(mtd,'lyRev'), ses=sum(mtd,'ses');
+const RL=SM?'פדיון · קופה':'הכנסות האתר · GA4';
+const mer=div(rev,sp), pace=rev/n*DAYS, spPace=sp/n*DAYS;
+if(!hasT('rev')&&!hasT('budget')&&!hasT('mer')){document.getElementById('monthH2').textContent='החודש עד היום';document.getElementById('monthPill').textContent='החודש עד היום';}
+document.getElementById('monthSrc').textContent=`1–${dmy(L)} · ${n} מתוך ${DAYS} ימים (${Math.round(frac*100)}% מהחודש), ימים מלאים בלבד.`+(hasT('rev')||hasT('budget')?' הקו האנכי בפס = איפה צריך להיות לפי הקצב.':'')+(SM?` פדיון ועסקאות: ${SM.note}, אחרי ביטולים · סשנים והכנסת GA4 להשוואה: GA4`:` הכנסה, הזמנות וסשנים: GA4`)+` · הוצאה: Meta + Google Ads`+(D.mtdNew?' · לקוחות חדשים: GA4 (first_time_purchasers)':'')+(C.targetsSource?` · יעדים: ${C.targetsSource}`:'')+'.';
+const status=r=>r>=1?'<span class="chip good">בקצב</span>':r>=.9?'<span class="chip warn">קרוב לקצב</span>':'<span class="chip bad">מתחת לקצב</span>';
+const bar=(v,t)=>`<div class="bar"><i style="width:${Math.min(100,v/t*100)}%"></i><b style="right:${frac*100}%"></b></div>`;
+const sgn=v=>(v>=0?'+':'')+pct(v);
+const k=[];
+if(hasT('rev')){const need=(T.rev-rev)/Math.max(1,DAYS-n);k.push(`<div class="kpi big"><span class="lab">${RL}</span><span class="val">${ils(rev)}</span>${bar(rev,T.rev)}<span class="sub">${pct(rev/T.rev)} מהיעד (${ils(T.rev)}) ${status(rev/T.rev/frac)}</span><span class="sub">צפי לסוף החודש בקצב הנוכחי: ${ils(pace)} · נדרש מכאן ${ils(need)} ביום</span></div>`)}
+else k.push(`<div class="kpi"><span class="lab">${RL}</span><span class="val">${ils(rev)}</span><span class="sub">צפי לסוף החודש: ${ils(pace)}</span>${ly?`<span class="sub">מול אותם ימים אשתקד: ${sgn(rev/ly-1)}</span>`:''}</div>`);
+if(hasT('budget')) k.push(`<div class="kpi big"><span class="lab">השקעת מדיה · Meta + Google</span><span class="val">${ils(sp)}</span>${bar(sp,T.budget)}<span class="sub">${pct(sp/T.budget)} מהתקציב (${ils(T.budget)}) · צפי לסוף החודש: ${ils(spPace)}</span><span class="sub">מטא ${ils(spM)} · גוגל ${ils(spG)}</span></div>`);
+else k.push(`<div class="kpi"><span class="lab">השקעת מדיה · Meta + Google</span><span class="val">${ils(sp)}</span><span class="sub">מטא ${ils(spM)} · גוגל ${ils(spG)} · צפי: ${ils(spPace)}</span></div>`);
+k.push(`<div class="kpi"><span class="lab">MER · ${SM?'פדיון קופה':'הכנסת GA4'} / הוצאה</span><span class="val">${fmt(mer,2)}</span>`+(hasT('mer')?`<span class="sub">${Math.round(mer/T.mer*100)}% מיעד MER (${T.mer}) ${mer>=T.mer?'<span class="chip good">ביעד</span>':'<span class="chip bad">מתחת ליעד</span>'}</span>`:'')+`</div>`);
+if(ly&&hasT('rev')) k.push(`<div class="kpi"><span class="lab">מול אותם ימים אשתקד · ${SM?'קופה':'GA4'}</span><span class="val">${sgn(rev/ly-1)}</span><span class="sub">${ils(ly)} ב-1–${dmy(L)} אשתקד</span></div>`);
+k.push(`<div class="kpi"><span class="lab">${SM?'עסקאות · קופה':'הזמנות · GA4'}</span><span class="val">${fmt(ord)}</span><span class="sub">עסקה ממוצעת ${ils(rev/ord)}${SM&&SM.lyOrd?` · אשתקד ${fmt(SM.lyOrd)} (${sgn(ord/SM.lyOrd-1)})`:''}</span></div>`);
+if(SM) k.push(`<div class="kpi"><span class="lab">הכנסה לפי GA4 · להשוואה</span><span class="val">${ils(gRev)}</span><span class="sub">${sgn(gRev/rev-1)} מול הקופה · MER לפי GA4 ${fmt(div(gRev,sp),2)} · ${fmt(gOrd)} הזמנות</span></div>`);
+if(D.mtdNew&&D.mtdNew.cur!=null) k.push(`<div class="kpi"><span class="lab">לקוחות חדשים · GA4</span><span class="val">${fmt(D.mtdNew.cur)}</span><span class="sub">`+(hasT('newCust')?`${pct(D.mtdNew.cur/T.newCust)} מהיעד (${fmt(T.newCust)})`:'')+(D.mtdNew.ly!=null?`${hasT('newCust')?' · ':''}אשתקד ${fmt(D.mtdNew.ly)}`:'')+`</span></div>`);
+if(D.store&&D.store.rev) k.push(`<div class="kpi"><span class="lab">${esc(D.store.label||'פדיון לפי הקופה')}</span><span class="val">${ils(D.store.rev)}</span><span class="sub">${esc(D.store.note||'')}</span></div>`);
+k.push(`<div class="kpi"><span class="lab">סשנים · אחוז המרה (GA4)</span><span class="val">${fmt(ses)}</span><span class="sub">המרה ${pct(gOrd/ses,2)} (הזמנות GA4 / סשנים)</span></div>`);
+document.getElementById('kpis').innerHTML=k.join('');
+
+let chart;
+function drawChart(){
+  if(!window.Chart) return;
+  const c1=`rgb(${css('--c1')})`,c2=`rgb(${css('--c2')})`,c3=`rgb(${css('--c3')})`,g=css('--line'),m=css('--muted');
+  const ds=days.slice(Math.max(0,LAST-29),LAST+1);
+  if(chart) chart.destroy();
+  chart=new Chart(document.getElementById('revChart'),{type:'bar',data:{labels:ds.map(x=>dmy(x.d)),datasets:[
+    {type:'line',label:'הכנסות GA4',data:ds.map(x=>x.rev),borderColor:c1,backgroundColor:c1,tension:.25,pointRadius:2,yAxisID:'y',order:1},
+    ...(HAS_STORE?[{type:'line',label:'פדיון קופה',data:ds.map(x=>x.srev??null),borderColor:`rgb(${css('--c5')})`,backgroundColor:`rgb(${css('--c5')})`,borderWidth:3,tension:.25,pointRadius:3,spanGaps:false,yAxisID:'y',order:0}]:[]),
+    {type:'line',label:'אשתקד',data:ds.map(x=>x.lyRev),borderColor:c3,borderDash:[5,4],pointRadius:0,tension:.25,yAxisID:'y',order:2},
+    {type:'bar',label:'השקעה',data:ds.map(x=>Math.round(x.meta+x.goo)),backgroundColor:c2,borderRadius:3,yAxisID:'y2',order:3}]},
+   options:{maintainAspectRatio:false,locale:'he-IL',plugins:{legend:{display:false},tooltip:{rtl:true,callbacks:{label:c=>c.dataset.label+': '+ils(c.parsed.y)}}},
+    scales:{x:{reverse:true,grid:{display:false},ticks:{color:m,maxRotation:0,autoSkipPadding:8}},y:{position:'right',grid:{color:g},ticks:{color:m,callback:v=>CUR+fmt(v/1000)+'K'}},y2:{position:'left',grid:{display:false},ticks:{color:m,callback:v=>CUR+fmt(v/1000,1)+'K'},max:Math.max(...ds.map(x=>x.meta+x.goo))*3}}}});
+}
+drawChart();
+try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',drawChart)}catch(e){}
+new MutationObserver(drawChart).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+// ---------- table helpers ----------
+const HUES=['--c1','--c2','--c4','--c3','--c5','--c6'], H=i=>HUES[i%HUES.length];
+function shade(rows,cols){
+  const mm={};cols.forEach(c=>{const v=rows.map(r=>r[c.k]).filter(x=>x!=null&&isFinite(x));mm[c.k]=v.length?[Math.min(...v),Math.max(...v)]:[0,0]});
+  return (r,c)=>{const v=r[c.k];if(v==null||!isFinite(v))return '';const [lo,hi]=mm[c.k];if(hi===lo)return '';let t=(v-lo)/(hi-lo);if(c.better==='low')t=1-t;return `background:rgba(${css(c.h)},${(0.05+t*0.42).toFixed(2)})`};
+}
+function table(el,cols,rows,totRow){
+  const top=rows.filter(r=>!r._p), sh=shade(top,cols.filter(c=>c.better)), shc={};
+  let h='<thead><tr>'+cols.map(c=>`<th ${c.better?`data-k style="--h:${css(c.h)}"`:''}>${c.t}</th>`).join('')+'</tr></thead><tbody>';
+  rows.forEach(r=>{h+=`<tr class="${r._cls||''}" ${r._id?`data-id="${r._id}"`:''} ${r._p?`data-p="${r._p}" hidden`:''}>`+cols.map(c=>{const v=c.f?c.f(r[c.k],r):(r[c.k]??'');const st=c.better&&!r._p?sh(r,c):'';return `<td class="${c.cls??'n'}" style="${st}">${v}</td>`}).join('')+'</tr>'});
+  if(totRow) h+='<tr class="tot">'+cols.map(c=>`<td class="${c.cls??'n'}">${c.f?c.f(totRow[c.k],totRow):(totRow[c.k]??'')}</td>`).join('')+'</tr>';
+  el.innerHTML=h+'</tbody>';
+  const close=id=>el.querySelectorAll(`tr[data-p="${id}"]`).forEach(x=>{x.hidden=true;if(x.dataset.id){x.classList.remove('open');close(x.dataset.id)}});
+  el.querySelectorAll('tr.click').forEach(tr=>{tr.tabIndex=0;const tg=()=>{const o=!tr.classList.contains('open');tr.classList.toggle('open',o);if(o)el.querySelectorAll(`tr[data-p="${tr.dataset.id}"]`).forEach(x=>x.hidden=false);else close(tr.dataset.id)};tr.addEventListener('click',tg);tr.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();tg()}})});
+}
+const dateCol={t:'תאריך',k:'d',cls:'',f:(v,x)=>x._tot?v:`${wd(v)} ${dmy(v)}${partLbl(v)}`};
+
+// ---------- range control ----------
+function rangeCtrl(el,draw,presets){
+  const min=days[0].d, max=ASOF, mS=L.slice(0,8)+'01';
+  const pm=new Date(+L.slice(0,4),+L.slice(5,7)-2,1), pmE=new Date(+L.slice(0,4),+L.slice(5,7)-1,0);
+  const iso=x=>`${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`;
+  const back=k=>days[Math.max(0,LAST-k+1)].d;
+  const all={today:['היום',max,max],yday:['אתמול',L,L],d7:['7 ימים',back(7),L],d14:['14 ימים',back(14),L],d30:['30 ימים',back(30),L],mtd:['החודש',mS,L],pm:['חודש קודם',iso(pm)<min?min:iso(pm),iso(pmE)]};
+  if(!PART) delete all.today;
+  const P=presets.filter(p=>all[p]).map(p=>all[p]);
+  el.innerHTML=`<div class="seg">${P.map((p,i)=>`<button aria-pressed="false" data-i="${i}">${p[0]}</button>`).join('')}</div><label>מ־ <input type="date" min="${min}" max="${max}"></label><label>עד <input type="date" min="${min}" max="${max}"></label>`;
+  const [a,b]=el.querySelectorAll('input'), btns=[...el.querySelectorAll('button')];
+  const fire=()=>{let x=a.value,y=b.value;if(x>y)[x,y]=[y,x];let i0=days.findIndex(d=>d.d>=x),i1=-1;days.forEach((d,i)=>{if(d.d<=y)i1=i});if(i0<0)i0=N-1;if(i1<i0)i1=i0;draw(i0,i1)};
+  btns.forEach((bt,i)=>bt.addEventListener('click',()=>{btns.forEach(z=>z.setAttribute('aria-pressed',z===bt));a.value=P[i][1];b.value=P[i][2];fire()}));
+  [a,b].forEach(x=>x.addEventListener('change',()=>{btns.forEach(z=>z.setAttribute('aria-pressed','false'));if(!x.value)x.value=x===a?min:max;fire()}));
+  const di=P.findIndex(p=>p[0]==='14 ימים');btns[di>=0?di:0].click();
+}
+const tot=(i0,i1)=>`סה״כ ${i1-i0+1} ימים`;
+
+// ---------- 2. site ----------
+function site(i0,i1){
+  const ds=days.slice(i0,i1+1).reverse().map(x=>({...x,sp:x.meta+x.goo,aov:div(x.rev,x.ord),cr:div(x.ord,x.ses),mer:div(x.rev,x.meta+x.goo)}));
+  const t={_tot:1,d:tot(i0,i1),rev:sum(ds,'rev'),ord:sum(ds,'ord'),ses:sum(ds,'ses'),pv:sum(ds,'pv'),atc:sum(ds,'atc'),co:sum(ds,'co'),sp:sum(ds,'sp')};t.aov=div(t.rev,t.ord);t.cr=div(t.ord,t.ses);t.mer=div(t.rev,t.sp);
+  const sd=ds.filter(x=>x.srev!=null);if(sd.length){t.srev=sum(sd,'srev');t.sord=sum(sd,'sord');t.smer=div(t.srev,sum(sd,'sp'));t.sn=sd.length}
+  ds.forEach(x=>{x.smer=x.srev!=null?div(x.srev,x.sp):null});
+  const sTot=(v,x)=>x._tot?(v==null?'—':ils(v)+(x.sn<ds.length?` <span class="part">${x.sn} ימים</span>`:'')):(v==null?'—':ils(v));
+  table(document.getElementById('siteT'),[dateCol,
+    {t:'הוצאה סה״כ',k:'sp',f:v=>ils(v),better:'high',h:H(0)},{t:'פדיון קופה',k:'srev',f:sTot,better:'high',h:H(5)},{t:'עסקאות קופה',k:'sord',f:v=>v==null?'—':fmt(v),better:'high',h:H(4)},{t:'MER קופה',k:'smer',f:v=>v==null?'—':fmt(v,2),better:'high',h:H(3)},
+    {t:'הזמנות (GA4)',k:'ord',f:v=>fmt(v),better:'high',h:H(1)},{t:'הכנסה (GA4)',k:'rev',f:v=>ils(v),better:'high',h:H(2)},{t:'סשנים',k:'ses',f:v=>fmt(v),better:'high',h:H(3)},
+    {t:'AOV',k:'aov',f:v=>ils(v),better:'high',h:H(4)},{t:'אחוז המרה',k:'cr',f:v=>pct(v,2),better:'high',h:H(5)},
+    {t:'צפיות במוצרים',k:'pv',f:v=>fmt(v),better:'high',h:H(0)},{t:'הוספות לסל',k:'atc',f:v=>fmt(v),better:'high',h:H(1)},
+    {t:'צ׳קאאוטים',k:'co',f:v=>fmt(v),better:'high',h:H(2)},{t:'MER',k:'mer',f:v=>fmt(v,2),better:'high',h:H(3)}].filter(c=>HAS_STORE||!['srev','sord','smer'].includes(c.k)),ds,t);
+}
+// ---------- 3. funnel ----------
+function funnel(i0,i1){
+  const ds=days.slice(i0,i1+1).reverse().map(x=>({...x,a:div(x.atc,x.pv),b:div(x.co,x.atc),c:div(x.ord,x.co)}));
+  const t={_tot:1,d:tot(i0,i1),ses:sum(ds,'ses'),pv:sum(ds,'pv'),atc:sum(ds,'atc'),co:sum(ds,'co'),ord:sum(ds,'ord')};t.a=div(t.atc,t.pv);t.b=div(t.co,t.atc);t.c=div(t.ord,t.co);
+  table(document.getElementById('funT'),[dateCol,
+    {t:'סשנים',k:'ses',f:v=>fmt(v),better:'high',h:H(3)},{t:'צפיות במוצרים',k:'pv',f:v=>fmt(v),better:'high',h:H(4)},
+    {t:'הוספה לסל / צפיות',k:'a',f:v=>pct(v,2),better:'high',h:H(0)},{t:'הוספות לסל',k:'atc',f:v=>fmt(v),better:'high',h:H(1)},
+    {t:'צ׳קאאוט / הוספה לסל',k:'b',f:v=>pct(v),better:'high',h:H(2)},{t:'צ׳קאאוטים',k:'co',f:v=>fmt(v),better:'high',h:H(5)},
+    {t:'רכישה / צ׳קאאוט',k:'c',f:v=>pct(v),better:'high',h:H(3)},{t:'רכישות',k:'ord',f:v=>fmt(v),better:'high',h:H(0)}],ds,t);
+}
+// ---------- 4. meta ----------
+const M=D.meta;
+function meta(i0,i1){
+  const ag={}, add=(k,name,sp,im,cl,p,v)=>{const o=ag[k]||(ag[k]={name,s:0,im:0,oc:0,p:0,v:0});o.s+=sp;o.im+=im;o.oc+=cl;o.p+=p;o.v+=v;return o};
+  for(const [d,ad,sp,im,cl,p,v] of M.rows){if(d<i0||d>i1)continue;const set=M.ads[ad][1],cp=M.sets[set][1];
+    add('a'+ad,M.ads[ad][0],sp,im,cl,p,v);add('s'+set,M.sets[set][0],sp,im,cl,p,v);add('c'+cp,M.camps[cp],sp,im,cl,p,v)}
+  const ga={};for(const [d,c,r] of M.ga){if(d<i0||d>i1)continue;ga[c]=(ga[c]||0)+r}
+  const der=(o,g)=>({...o,cpa:div(o.s,o.p),ctr:div(o.oc,o.im),cpc:div(o.s,o.oc),roas:div(o.v,o.s),g4:g,mer:g==null?null:div(g,o.s)});
+  const rows=[];
+  Object.keys(M.camps).filter(c=>ag['c'+c]&&ag['c'+c].s>0).sort((x,y)=>ag['c'+y].s-ag['c'+x].s).forEach(c=>{
+    rows.push({...der(ag['c'+c],ga[c]||0),_cls:'click',_id:'c'+c});
+    Object.keys(M.sets).filter(s=>M.sets[s][1]===c&&ag['s'+s]&&ag['s'+s].s>0).sort((x,y)=>ag['s'+y].s-ag['s'+x].s).forEach(s=>{
+      rows.push({...der(ag['s'+s],null),_cls:'click lvl1',_id:'s'+s,_p:'c'+c});
+      Object.keys(M.ads).filter(a=>M.ads[a][1]===s&&ag['a'+a]&&ag['a'+a].s>0).sort((x,y)=>ag['a'+y].s-ag['a'+x].s).forEach(a=>rows.push({...der(ag['a'+a],null),_cls:'lvl2',_p:'s'+s}));
+    });
+  });
+  const top=rows.filter(r=>!r._p), t=der({s:sum(top,'s'),p:sum(top,'p'),v:sum(top,'v'),im:sum(top,'im'),oc:sum(top,'oc')},sum(top,'g4'));t.name=`סה״כ (${top.length} קמפיינים)`;
+  table(document.getElementById('metaT'),[
+    {t:'קמפיין / קבוצת מודעות / מודעה',k:'name',cls:'name',f:v=>esc(v)},{t:'הוצאה',k:'s',f:v=>ils(v),better:'high',h:H(0)},
+    {t:'רכישות (Meta)',k:'p',f:v=>fmt(v),better:'high',h:H(1)},{t:'CPA (Meta)',k:'cpa',f:v=>ils(v,1),better:'low',h:H(2)},
+    {t:'CTR',k:'ctr',f:v=>pct(v,2),better:'high',h:H(3)},{t:'CPC',k:'cpc',f:v=>ils(v,2),better:'low',h:H(4)},
+    {t:'ROAS (Meta)',k:'roas',f:v=>fmt(v,2),better:'high',h:H(5)},{t:'הכנסה GA4',k:'g4',f:v=>v==null?'':ils(v),better:'high',h:H(1)},
+    {t:'MER (GA4)',k:'mer',f:v=>v==null?'':fmt(v,2),better:'high',h:H(0)}],rows,t);
+}
+// ---------- 5. google ----------
+const G=D.google;
+function google(i0,i1){
+  const ag={};for(const [d,c,s,cl,cv,val] of G.rows){if(d<i0||d>i1)continue;const o=ag[c]||(ag[c]={name:G.camps[c],s:0,cl:0,cv:0,val:0});o.s+=s;o.cl+=cl;o.cv+=cv;o.val+=val}
+  const ga={};for(const [d,c,r] of G.ga){if(d<i0||d>i1)continue;ga[c]=(ga[c]||0)+r}
+  const der=o=>({...o,cpc:div(o.s,o.cl),cpa:div(o.s,o.cv),roas:div(o.val,o.s)});
+  const rows=Object.entries(ag).filter(([,o])=>o.s>0).sort((a,b)=>b[1].s-a[1].s).map(([c,o])=>({...der(o),g4:ga[c]||0}));
+  const t=der({s:sum(rows,'s'),cl:sum(rows,'cl'),cv:sum(rows,'cv'),val:sum(rows,'val')});t.g4=sum(rows,'g4');t.name=`סה״כ (${rows.length} קמפיינים)`;
+  table(document.getElementById('gooT'),[
+    {t:'קמפיין',k:'name',cls:'name',f:v=>esc(v)},{t:'הוצאה',k:'s',f:v=>ils(v),better:'high',h:H(0)},{t:'קליקים',k:'cl',f:v=>fmt(v),better:'high',h:H(1)},
+    {t:'CPC',k:'cpc',f:v=>ils(v,2),better:'low',h:H(2)},{t:'המרות',k:'cv',f:v=>fmt(v,1),better:'high',h:H(3)},
+    {t:'CPA',k:'cpa',f:v=>ils(v,1),better:'low',h:H(4)},{t:'ערך המרה',k:'val',f:v=>ils(v),better:'high',h:H(5)},
+    {t:'ROAS',k:'roas',f:v=>fmt(v,2),better:'high',h:H(0)},{t:'הכנסה GA4',k:'g4',f:v=>ils(v),better:'high',h:H(1)}],rows,t);
+}
+// ---------- 6. chatgpt ----------
+const CH=D.chatgpt;
+function chatgpt(i0,i1){
+  const el=document.getElementById('chatT');
+  const ag={};for(const [d,c,s,im,cl,cv,se,en,atc,tx,rv] of CH.rows){if(d<i0||d>i1)continue;const o=ag[c]||(ag[c]={name:CH.camps[c],s:0,im:0,cl:0,cv:0,se:0,en:0,atc:0,tx:0,rv:0});o.s+=s;o.im+=im;o.cl+=cl;o.cv+=cv;o.se+=se;o.en+=en;o.atc+=atc;o.tx+=tx;o.rv+=rv}
+  const der=o=>({...o,ctr:div(o.cl,o.im),cpc:div(o.s,o.cl),cpm:o.im?o.s/o.im*1000:null,cpa:div(o.s,o.cv),eng:div(o.en,o.se)});
+  const rows=Object.values(ag).filter(o=>o.s>0||o.se>0).sort((a,b)=>b.s-a.s).map(der);
+  if(!rows.length){el.innerHTML='<tbody><tr><td class="name">אין פעילות של ChatGPT בטווח הזה</td></tr></tbody>';return}
+  const k=['s','im','cl','cv','se','en','atc','tx','rv'],t={};k.forEach(x=>t[x]=sum(rows,x));const T=der(t);T.name=`סה״כ (${rows.length} קמפיינים)`;
+  table(el,[{t:'קמפיין',k:'name',cls:'name',f:v=>esc(v)},{t:'הוצאה',k:'s',f:v=>ils(v),better:'high',h:H(0)},{t:'חשיפות',k:'im',f:v=>fmt(v)},{t:'קליקים',k:'cl',f:v=>fmt(v),better:'high',h:H(1)},
+    {t:'CTR',k:'ctr',f:v=>pct(v,2)},{t:'CPC',k:'cpc',f:v=>ils(v,2)},{t:'CPM',k:'cpm',f:v=>ils(v,1)},{t:'המרות (OpenAI)',k:'cv',f:v=>fmt(v)},{t:'CPA (OpenAI)',k:'cpa',f:v=>v==null?'—':ils(v)},
+    {t:'כניסות GA4',k:'se',f:v=>fmt(v)},{t:'מעורבות',k:'eng',f:v=>pct(v)},{t:'הוספות לסל',k:'atc',f:v=>fmt(v)},{t:'רכישות GA4',k:'tx',f:v=>fmt(v)},{t:'הכנסה GA4',k:'rv',f:v=>ils(v)}],rows,T);
+}
+if(CH&&CH.note)document.getElementById('chatNote').textContent=CH.note+' ';
+if(!CH){const s=document.getElementById('chatgpt');if(s)s.remove();const a=document.querySelector('a[href="#chatgpt"]');if(a)a.remove()}
+document.querySelectorAll('.ctrl[data-for]').forEach(el=>{const f={site,funnel,meta,google,chatgpt}[el.dataset.for];rangeCtrl(el,f,el.dataset.for==='site'||el.dataset.for==='funnel'?['d7','d14','d30','mtd','pm']:['today','yday','d7','d14','d30','mtd','pm'])});
+
+// ---------- 6. products ----------
+const IT=D.items, W=IT.weeks, wl=w=>dmy(w.s)+'–'+dmy(w.e);
+const lastFull=W[W.length-1].partial?W.length-2:W.length-1;
+// daily item data: last 3 full days vs 3 days before
+const dIdx=IT.days.map((d,i)=>[d,i]).filter(([d])=>!(PART&&d===ASOF)).map(x=>x[1]);
+const d3cur=dIdx.slice(-3), d3prev=dIdx.slice(-6,-3);
+const pc=document.getElementById('prodCtrl');
+const PP=[['3 ימים אחרונים','d3'],['שבוע אחרון',1],['4 שבועות',4],['8 שבועות',8]];
+pc.innerHTML=`<div class="seg">${PP.map((p,i)=>`<button aria-pressed="false" data-i="${i}">${p[0]}</button>`).join('')}</div>
+ <label>משבוע <select id="wA">${W.map((w,i)=>`<option value="${i}">${wl(w)}${w.partial?' (חלקי)':''}</option>`).join('')}</select></label>
+ <label>עד שבוע <select id="wB">${W.map((w,i)=>`<option value="${i}">${wl(w)}${w.partial?' (חלקי)':''}</option>`).join('')}</select></label>`;
+const wA=document.getElementById('wA'), wB=document.getElementById('wB'), pbtn=[...pc.querySelectorAll('button')];
+let pmode='w';
+function agg(src,set){const o={};for(const [p,i,v,a,u,r] of src){if(!set.has(p))continue;const x=o[i]||(o[i]={v:0,a:0,u:0,r:0});x.v+=v;x.a+=a;x.u+=u;x.r+=r}return o}
+const Z={v:0,a:0,u:0,r:0}, crf=x=>div(x.u,x.v);
+function drawProducts(){
+  const d3=pmode==='d3';
+  let a=+wA.value,b=+wB.value;if(a>b)[a,b]=[b,a];
+  const nW=b-a+1, pa=a-nW, hasPrev=d3?d3prev.length===3:pa>=0;
+  const src=d3?IT.drows:IT.rows;
+  const cur=agg(src,new Set(d3?d3cur:range(a,b))), prv=hasPrev?agg(src,new Set(d3?d3prev:range(pa,a-1))):{};
+  const P=i=>prv[i]||Z, isNew=i=>hasPrev&&!prv[i];
+  // thresholds for a meaningful % (scaled to period length)
+  const minRev=d3?300:Math.max(300,150*nW), minV=d3?100:Math.max(100,50*nW), minU=5;
+  const ch=(c,p,base)=>{if(!hasPrev||!base||!p)return '';const r=c/p-1;if(!isFinite(r)||Math.abs(r)<0.005)return '';return `<span class="chip ${r>0?'good':'bad'}" title="קודם: ${fmt(p,p<10?2:0)}">${r>0?'+':''}${Math.round(r*100)}%</span>`};
+  const newChip=i=>isNew(i)?'<span class="chip flat" title="לא היו למוצר נתונים בתקופת ההשוואה">חדש</span>':'';
+  const curLbl=d3?`${dmy(IT.days[d3cur[0]])}–${dmy(IT.days[d3cur[2]])}`:`${dmy(W[a].s)}–${dmy(W[b].e)}`;
+  const prvLbl=!hasPrev?'':d3?`${dmy(IT.days[d3prev[0]])}–${dmy(IT.days[d3prev[2]])}`:`${dmy(W[pa].s)}–${dmy(W[a-1].e)}`;
+  document.getElementById('prodRange').innerHTML=`תקופה: <b>${curLbl}</b>`+(d3?' (3 ימים מלאים)':` (${nW} ${nW>1?'שבועות':'שבוע'}${W[b].partial?', השבוע האחרון חלקי':''})`)+(hasPrev?` · מושווה ל-<b>${prvLbl}</b>`:' · <b>אין תקופה קודמת בטווח הנתונים, לכן אין אחוזי שינוי</b>');
+  const ids=Object.keys(cur).map(Number), allV=ids.reduce((t,i)=>t+cur[i].v,0), allU=ids.reduce((t,i)=>t+cur[i].u,0), avg=div(allU,allV), totR=ids.reduce((t,i)=>t+cur[i].r,0);
+  const nm=i=>esc(IT.names[i]), ct=i=>esc(IT.cats[IT.cat[i]]);
+  // top 30
+  const top=ids.filter(i=>cur[i].r>0).sort((x,y)=>cur[y].r-cur[x].r).slice(0,30).map((i,j)=>{const c=cur[i],p=P(i);return {j:j+1,i,n:nm(i),c:ct(i),r:c.r,v:c.v,a:c.a,u:c.u,cr:crf(c),
+    rC:isNew(i)?newChip(i):ch(c.r,p.r,p.r>=minRev),vC:ch(c.v,p.v,p.v>=minV),uC:ch(c.u,p.u,p.u>=minU),crC:ch(crf(c),crf(p),p.v>=minV&&p.u>=minU&&c.v>=minV)}});
+  table(document.getElementById('topT'),[{t:'#',k:'j'},{t:'מוצר',k:'n',cls:'name'},{t:'קולקציה',k:'c',cls:''},
+    {t:'הכנסה',k:'r',f:(v,x)=>ils(v)+x.rC,better:'high',h:H(0)},{t:'צפיות',k:'v',f:(v,x)=>fmt(v)+x.vC,better:'high',h:H(3)},
+    {t:'אחוז המרה',k:'cr',f:(v,x)=>pct(v,2)+x.crC,better:'high',h:H(5)},{t:'הוספות לסל',k:'a',f:v=>fmt(v),better:'high',h:H(1)},
+    {t:'רכישות (יח׳)',k:'u',f:(v,x)=>fmt(v)+x.uC,better:'high',h:H(2)}],top);
+  // categories
+  const cc={},cp={};for(const i of ids){const k=IT.cat[i],o=cc[k]||(cc[k]={v:0,a:0,u:0,r:0});for(const m in o)o[m]+=cur[i][m]}
+  for(const i in prv){const k=IT.cat[i],o=cp[k]||(cp[k]={v:0,a:0,u:0,r:0});for(const m in o)o[m]+=prv[i][m]}
+  const cats=Object.keys(cc).sort((x,y)=>cc[y].r-cc[x].r).slice(0,10).map(k=>{const c=cc[k],p=cp[k]||Z;return {n:esc(IT.cats[k]),r:c.r,sh:div(c.r,totR),v:c.v,a:c.a,u:c.u,cr:crf(c),
+    rC:hasPrev&&!cp[k]?'<span class="chip flat">חדש</span>':ch(c.r,p.r,p.r>=minRev*5),vC:ch(c.v,p.v,p.v>=minV*5),uC:ch(c.u,p.u,p.u>=minU*5),crC:ch(crf(c),crf(p),p.v>=minV*5&&p.u>=minU*5)}});
+  table(document.getElementById('catT'),[{t:'קולקציה',k:'n',cls:''},{t:'הכנסה',k:'r',f:(v,x)=>ils(v)+x.rC,better:'high',h:H(0)},{t:'נתח',k:'sh',f:v=>pct(v)},
+    {t:'צפיות',k:'v',f:(v,x)=>fmt(v)+x.vC,better:'high',h:H(3)},{t:'אחוז המרה',k:'cr',f:(v,x)=>pct(v,2)+x.crC,better:'high',h:H(5)},
+    {t:'הוספות לסל',k:'a',f:v=>fmt(v),better:'high',h:H(1)},{t:'רכישות',k:'u',f:(v,x)=>fmt(v)+x.uC,better:'high',h:H(2)}],cats);
+  // growth
+  const none='<tbody><tr><td class="name">אין תקופה קודמת בטווח הנתונים, אז אין למה להשוות</td></tr></tbody>';
+  const gcols=[{t:'מוצר',k:'n',cls:'name'},{t:'הכנסה',k:'r',f:v=>ils(v)},{t:'קודמת',k:'p',f:v=>ils(v)},{t:'שינוי ₪',k:'d',f:v=>'+'+fmt(v),better:'high',h:H(1)},{t:'שינוי %',k:'q',f:(v,x)=>x.p?'+'+fmt(v*100)+'%':'<span class="chip flat">חדש</span>'}];
+  const grow=i=>({n:nm(i),r:cur[i].r,p:P(i).r,d:cur[i].r-P(i).r,q:div(cur[i].r-P(i).r,P(i).r)});
+  const ga=ids.filter(i=>cur[i].r>P(i).r).sort((x,y)=>(cur[y].r-P(y).r)-(cur[x].r-P(x).r)).slice(0,10).map(grow);
+  const gp=ids.filter(i=>P(i).r>=minRev&&cur[i].r>P(i).r).sort((x,y)=>cur[y].r/P(y).r-cur[x].r/P(x).r).slice(0,10).map(grow);
+  if(hasPrev){table(document.getElementById('riseAbsT'),gcols,ga);table(document.getElementById('risePctT'),gcols,gp)}
+  else{document.getElementById('riseAbsT').innerHTML=none;document.getElementById('risePctT').innerHTML=none}
+  document.getElementById('riseNote').textContent=`רק מוצרים עם הכנסה של ${CUR}${minRev} לפחות בתקופה הקודמת, כדי שאחוזים על בסיס זעיר לא יציפו את הרשימה.`;
+  // potential
+  const sold=ids.filter(i=>cur[i].u>=1).map(i=>cur[i].v).sort((x,y)=>x-y), med=sold.length?sold[Math.floor(sold.length/2)]:0;
+  const pMinU=d3?2:nW>=4?3:2, pMinV=d3?15:30;
+  const gift=i=>cur[i].u>0&&cur[i].r/cur[i].u<5;
+  const pot=ids.filter(i=>!gift(i)&&crf(cur[i])<=1&&cur[i].u>=pMinU&&cur[i].v>=pMinV&&cur[i].v<med&&crf(cur[i])>=1.5*avg).sort((x,y)=>crf(cur[y])-crf(cur[x])).slice(0,10)
+    .map(i=>({n:nm(i),c:ct(i),v:cur[i].v,u:cur[i].u,cr:crf(cur[i]),x:crf(cur[i])/avg,r:cur[i].r,a:cur[i].a}));
+  table(document.getElementById('potT'),[{t:'מוצר',k:'n',cls:'name'},{t:'קולקציה',k:'c',cls:''},{t:'צפיות',k:'v',f:v=>fmt(v)},{t:'רכישות',k:'u',f:v=>fmt(v)},
+    {t:'אחוז המרה',k:'cr',f:v=>pct(v,2),better:'high',h:H(5)},{t:'פי מהממוצע',k:'x',f:v=>fmt(v,1)},{t:'הכנסה',k:'r',f:v=>ils(v)},{t:'הוספות לסל',k:'a',f:v=>fmt(v)}],pot);
+  document.getElementById('potNote').textContent=`אחוז המרה גבוה ומעט חשיפה: לפחות ${pMinU} רכישות ו-${pMinV} צפיות (פחות מזה זה רעש), אחוז המרה של פי 1.5 לפחות מהממוצע (${pct(avg,2)}), ופחות צפיות מהחציון של המוצרים שנמכרו (${fmt(med)}). ממוין לפי אחוז המרה. לא כולל מתנות (מחיר ממוצע מתחת ל-₪5) ומוצרים שנמכרו ביותר יחידות ממה שנצפו (מארזים). מועמדים להצעה בעגלה ולקריאייטיב.`;
+  // leak
+  const lMinV=d3?300:Math.round(600*nW);
+  const leak=ids.filter(i=>cur[i].v>=lMinV&&crf(cur[i])<0.5*avg).sort((x,y)=>cur[y].v-cur[x].v).slice(0,10).map(i=>({n:nm(i),c:ct(i),v:cur[i].v,a:cur[i].a,u:cur[i].u,cr:crf(cur[i])}));
+  table(document.getElementById('leakT'),[{t:'מוצר',k:'n',cls:'name'},{t:'קולקציה',k:'c',cls:''},{t:'צפיות',k:'v',f:v=>fmt(v),better:'high',h:H(3)},{t:'הוספות לסל',k:'a',f:v=>fmt(v)},{t:'רכישות',k:'u',f:v=>fmt(v)},{t:'אחוז המרה',k:'cr',f:v=>pct(v,2)}],leak);
+  document.getElementById('leakNote').textContent=`${fmt(lMinV)} צפיות לפחות ואחוז המרה מתחת לחצי מהממוצע. כדאי לבדוק מידות, מלאי, מחיר ותמונות לפני שמגדילים להם חשיפה.`;
+}
+function range(a,b){const r=[];for(let i=a;i<=b;i++)r.push(i);return r}
+document.getElementById('prodSrc').textContent='GA4, נתוני מוצר ברמה שבועית (ראשון–שבת) ו-3 ימים אחרונים ברמה יומית · הכנסה = item_revenue · צפיות = view_item · אחוז המרה = רכישות / צפיות במוצר · קולקציה = שדה הקטגוריה של המוצר ב-GA4.';
+document.getElementById('prodFoot').innerHTML='<b>אחוזי השינוי:</b> מול אותו מספר שבועות (או ימים) שקדם לתקופה שנבחרה. אחוז מוצג רק כשלמוצר היה בסיס אמיתי בתקופה הקודמת: לפחות 5 רכישות, 100 צפיות לשבוע (50 לכל שבוע בתקופות ארוכות) או ₪300 הכנסה. מתחת לזה התא נשאר בלי אחוז, כי שינוי על בסיס קטן לא אומר כלום. מעבר עם העכבר על אחוז מראה את הערך הקודם. "חדש" = למוצר לא היו בכלל נתונים בתקופת ההשוואה, למשל מוצר שעלה לאתר רק עכשיו. כשהתקופה הקודמת יוצאת מטווח הנתונים, לא מוצגים אחוזים בכלל. רכישות במוצרים = יחידות שנמכרו (item quantity), לא מספר הזמנות. צ׳קאאוטים ברמת מוצר לא מוצגים, כי הרבה אתרים לא שולחים מוצרים באירוע begin_checkout. נכללות רק שורות עם 5 צפיות לפחות או רכישה.';
+function setPreset(i){pbtn.forEach((z,j)=>z.setAttribute('aria-pressed',j===i));const p=PP[i][1];if(p==='d3'){pmode='d3'}else{pmode='w';wB.value=lastFull;wA.value=Math.max(0,lastFull-p+1)}[wA,wB].forEach(x=>x.disabled=pmode==='d3');drawProducts()}
+pbtn.forEach((b,i)=>b.addEventListener('click',()=>setPreset(i)));
+[wA,wB].forEach(x=>x.addEventListener('change',()=>{pmode='w';pbtn.forEach(z=>z.setAttribute('aria-pressed','false'));drawProducts()}));
+setPreset(2);
+})();
+</script>

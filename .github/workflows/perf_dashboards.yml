@@ -1,0 +1,65 @@
+name: Client performance dashboards (מדד ביצועים)
+
+on:
+  schedule:
+    - cron: '0 5,11,17 * * *'   # 07:00 / 13:00 / 19:00 שעון ישראל (חורף)
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'perf_dashboard/**'
+      - '.github/workflows/perf_dashboards.yml'
+
+concurrency:
+  group: perf-dashboards
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - run: pip install requests cryptography
+
+      # raw Windsor history (date → rows) – only recent days are re-pulled each run
+      - uses: actions/cache@v4
+        with:
+          path: _dash_cache
+          key: dash-cache-v1-${{ github.run_id }}
+          restore-keys: dash-cache-v1-
+
+      - name: Restore published files (keeps a client's last good page if its build fails)
+        run: |
+          mkdir -p _dash_out/d
+          if git fetch --depth 1 origin dash-data; then
+            git archive FETCH_HEAD | tar -x -C _dash_out
+          fi
+
+      - name: Build dashboards
+        env:
+          WINDSOR_API_KEY: ${{ secrets.WINDSOR_API_KEY }}
+          DASH_SECRET: ${{ secrets.DASH_SECRET }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        run: python perf_dashboard/pipeline.py --out _dash_out --cache _dash_cache --work _dash_work
+
+      - name: Publish encrypted pages to dash-data branch
+        if: always()
+        run: |
+          test -f _dash_out/status.json || exit 0
+          cd _dash_out
+          git init -q -b dash-data
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          printf '%s\n' "Encrypted client dashboards. Each file opens only with its client's link." > README.md
+          git add -A
+          git commit -qm "dashboards $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" dash-data
