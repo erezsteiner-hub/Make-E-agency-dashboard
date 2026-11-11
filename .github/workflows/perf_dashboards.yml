@@ -12,12 +12,12 @@ on:
 
 concurrency:
   group: perf-dashboards
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: 75
     permissions:
       contents: write
     steps:
@@ -30,7 +30,7 @@ jobs:
       - run: pip install requests cryptography
 
       # raw Windsor history (date → rows) – only recent days are re-pulled each run
-      - uses: actions/cache@v4
+      - uses: actions/cache/restore@v4
         with:
           path: _dash_cache
           key: dash-cache-v1-${{ github.run_id }}
@@ -49,7 +49,14 @@ jobs:
           DASH_SECRET: ${{ secrets.DASH_SECRET }}
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-        run: python perf_dashboard/pipeline.py --out _dash_out --cache _dash_cache --work _dash_work
+        run: python perf_dashboard/pipeline.py --out _dash_out --cache _dash_cache --work _dash_work --budget 40
+
+      - name: Save Windsor cache (also when the build step failed)
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: _dash_cache
+          key: dash-cache-v1-${{ github.run_id }}
 
       - name: Publish encrypted pages to dash-data branch
         if: always()

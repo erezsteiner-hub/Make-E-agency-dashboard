@@ -18,6 +18,9 @@ import argparse, base64, collections, datetime as dt, gzip, hashlib, hmac, json,
 from email.mime.text import MIMEText
 from zoneinfo import ZoneInfo
 
+import threading
+from concurrent.futures import ThreadPoolExecutor
+
 import requests
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -26,7 +29,9 @@ WORKER = "https://agency-live-data.erezsteiner.workers.dev"
 LOADER_URL = "https://erezsteiner-hub.github.io/Make-E-agency-dashboard/r/"
 IL = ZoneInfo("Asia/Jerusalem")
 API_KEY = os.environ.get("WINDSOR_API_KEY", "")
-LOG = {"errors": [], "steps": []}
+LOG = {"errors": [], "steps": [], "deferred": 0}
+DEADLINE = [time.time() + 45 * 60]          # stop back-filling history after this; the rest comes next run
+SEM = threading.Semaphore(8)               # max concurrent Windsor requests
 
 
 def clean(msg):
@@ -49,7 +54,7 @@ def err(where, e):
 
 
 # ───────────────────────── Windsor ─────────────────────────
-def windsor(connector, fields, d1, d2, account=None, extra=None, retries=3, timeout=600):
+def windsor(connector, fields, d1, d2, account=None, extra=None, retries=3, timeout=300):
     params = {"api_key": API_KEY, "date_from": str(d1), "date_to": str(d2), "fields": ",".join(fields)}
     flt = []
     if account and connector != "googleanalytics4":
@@ -63,7 +68,8 @@ def windsor(connector, fields, d1, d2, account=None, extra=None, retries=3, time
     last = None
     for a in range(retries):
         try:
-            r = requests.get(f"{WINDSOR}/{connector}", params=params, timeout=timeout)
+            with SEM:
+                r = requests.get(f"{WINDSOR}/{connector}", params=params, timeout=timeout)
             if r.status_code >= 400:
                 raise RuntimeError(f"{connector} HTTP {r.status_code}: {r.text[:200]}")
             j = r.json()
@@ -130,6 +136,13 @@ class Cache:
             if k in self.d:
                 self.d[k].append(r)
 
+    def covered_from(self, asof):
+        """First day of the unbroken cached run ending at asof."""
+        cur = asof
+        while str(cur - dt.timedelta(1)) in self.d:
+            cur -= dt.timedelta(1)
+        return cur
+
     def rows(self, d1, d2):
         return [r for k, v in sorted(self.d.items()) if str(d1) <= k <= str(d2) for r in v]
 
@@ -138,7 +151,10 @@ class Cache:
 
 
 def sync(cache, d1, d2, refresh_from, pull, label):
-    for a, b in cache.missing(d1, d2, refresh_from):
+    for a, b in sorted(cache.missing(d1, d2, refresh_from), reverse=True):     # newest first
+        if b < refresh_from and time.time() > DEADLINE[0]:
+            LOG["deferred"] += 1
+            continue
         try:
             cache.put(a, b, pull(a, b))
         except Exception as e:  # noqa: BLE001 – one failed chunk must not kill the client
@@ -261,10 +277,18 @@ def run_client(key, c, args, now):
         json.dump({"data": ca.rows(d1, asof)}, open(path, "w"), ensure_ascii=False)
         return path, ca
 
-    files["ga4_daily"], _ = cached("ga4_daily", start - dt.timedelta(366), GA4_DAILY)
-    files["ga4_paid"], _ = cached("ga4_paid", start, GA4_PAID)
-    files["google_daily"], _ = cached("google_daily", start, google_daily)
-    files["meta_ad_daily"], meta_c = cached("meta_ad_daily", start, meta_ads)
+    jobs = {"ga4_daily": (start - dt.timedelta(366), GA4_DAILY), "ga4_paid": (start, GA4_PAID),
+            "google_daily": (start, google_daily), "meta_ad_daily": (start, meta_ads)}
+    if c.get("shopify"):
+        jobs["shopify_daily"] = (start, shopify_daily)
+    with ThreadPoolExecutor(len(jobs)) as ex:
+        fut = {n: ex.submit(cached, n, d, f) for n, (d, f) in jobs.items()}
+        got = {n: f.result() for n, f in fut.items()}
+    for n in ("ga4_daily", "ga4_paid", "google_daily", "meta_ad_daily"):
+        files[n] = got[n][0]
+    meta_c = got["meta_ad_daily"][1]
+    # history shown = what is fully cached for the paid channels (back-fill continues next runs)
+    start = max(start, meta_c.covered_from(asof), got["google_daily"][1].covered_from(asof), got["ga4_paid"][1].covered_from(asof))
 
     # check: ad-level spend vs account-level spend (last 14 days)
     try:
@@ -281,10 +305,13 @@ def run_client(key, c, args, now):
     ws_last = week_start(asof)
     weeks = [ws_last - dt.timedelta(7 * i) for i in range(52, -1, -1)]
     wc = Cache(C, "items_weekly")
-    for ws in weeks:
+    for ws in reversed(weeks):
         we = min(ws + dt.timedelta(6), asof)
         k = str(ws)
         if k in wc.d and we < refresh and ws != ws_last:
+            continue
+        if k not in wc.d and we < refresh and time.time() > DEADLINE[0]:
+            LOG["deferred"] += 1
             continue
         try:
             rows = windsor("googleanalytics4", ["account_id", "year_week"] + ITEM_F, ws, we, c["ga4"], ITEM_FILTER)
@@ -293,6 +320,10 @@ def run_client(key, c, args, now):
             err(f"{key}/items {ws}", e)
     wc.d = {k: v for k, v in wc.d.items() if k >= str(weeks[0])}
     wc.save()
+    have = list(weeks)
+    while have and str(have[0]) not in wc.d:
+        have.pop(0)
+    weeks = have
     files["items_weekly"] = []
     for i, ws in enumerate(weeks):
         p = os.path.join(W, f"items_w{i}.json")
@@ -338,7 +369,7 @@ def run_client(key, c, args, now):
 
     # Shopify → store revenue (net after refunds). Only days Shopify actually covers.
     if c.get("shopify"):
-        p, sc_ = cached("shopify_daily", start, shopify_daily)
+        p = got["shopify_daily"][0]
         days = collections.defaultdict(lambda: {"rev": 0.0, "ord": 0})
         for r in json.load(open(p))["data"]:
             d = days[str(r["date"])[:10]]
@@ -409,7 +440,9 @@ def main():
     ap.add_argument("--cache", default=os.path.join(HERE, "..", "_dash_cache"))
     ap.add_argument("--work", default=os.path.join(HERE, "..", "_dash_work"))
     ap.add_argument("--no-email", action="store_true")
+    ap.add_argument("--budget", type=float, default=45, help="minutes for history back-fill")
     args = ap.parse_args()
+    DEADLINE[0] = time.time() + args.budget * 60
     for p in (args.out, args.cache, args.work, os.path.join(args.out, "d")):
         os.makedirs(p, exist_ok=True)
     secret = os.environ.get("DASH_SECRET") or API_KEY
@@ -427,7 +460,7 @@ def main():
         except Exception:  # noqa: BLE001
             prev = {}
     ids, links, changed, built = {}, {}, set(), {}
-    for k in keys:
+    def one(k):
         c = dict(conf[k])
         c["_fx"] = fx if c.get("meta_currency") == "USD" else 1
         tok = token_for(secret, k, c.get("v", 1))
@@ -442,12 +475,16 @@ def main():
             built[k] = {"kb": summ["kb"], "days": summ["days"]}
         except Exception as e:  # noqa: BLE001 – keep the previous file for this client
             err(f"{k}/build", e)
+
+    with ThreadPoolExecutor(len(keys)) as ex:
+        list(ex.map(one, keys))
     # remove files of revoked links
     keep = {v + ".bin" for v in ids.values()} | {v + ".bin" for k, v in prev.items() if k not in ids}
     for f in os.listdir(os.path.join(args.out, "d")):
         if f not in keep:
             os.remove(os.path.join(args.out, "d", f))
     status = {"updated": now.isoformat(timespec="minutes"), "ids": {**prev, **ids}, "built": built,
+              "deferred_chunks": LOG["deferred"],
               "errors": LOG["errors"][:50], "fx_usd_ils": round(fx, 4)}
     json.dump(status, open(sp, "w"), ensure_ascii=False, indent=1)
     if changed and not args.no_email:
