@@ -1,0 +1,910 @@
+
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<!-- This site is hosted on Netlify. Anyone can build and deploy a site
+     like this one for free: https://netlify.new/?utm_campaign=loops&utm_source=ai-legible&utm_medium=owned&utm_content=comment&utm_id=d316cab6-18ba-4f25-a4ed-b4cc88e2c906
+     Netlify hosting facts for this site: static/SSR served via Netlify Edge. -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>לוח בקרה לקמפיינרים | MAKE-E</title>
+<style>
+:root{
+  --bg:#0E1420;
+  --panel:#141C2B;
+  --panel-2:#182236;
+  --line:#25314A;
+  --text:#E7ECF5;
+  --text-dim:#8492AC;
+  --scale:#3ECF8E;
+  --scale-bg:rgba(62,207,142,0.12);
+  --maintain:#7C9CBF;
+  --maintain-bg:rgba(124,156,191,0.10);
+  --watch:#E8B23B;
+  --watch-bg:rgba(232,178,59,0.12);
+  --kill:#E5566B;
+  --kill-bg:rgba(229,86,107,0.12);
+  --meta:#5B8DEF;
+  --google:#F2B84B;
+  --ga4:#B08CE0;
+  --mono: 'IBM Plex Mono', 'Courier New', monospace;
+  --sans: 'IBM Plex Sans', 'Segoe UI', Arial, sans-serif;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--sans);
+  font-size:14px;
+  line-height:1.5;
+  padding:28px 32px 60px;
+}
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+.topbar{
+  display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:20px;
+  margin-bottom:24px; padding-bottom:20px; border-bottom:1px solid var(--line);
+}
+.brand{ display:flex; flex-direction:column; gap:4px; }
+.brand .tag{ color:var(--text-dim); font-size:12px; }
+.brand h1{ margin:0; font-size:22px; font-weight:700; letter-spacing:-0.01em; }
+.controls{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+select, .btn, input[type="date"]{
+  background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+  padding:9px 14px; border-radius:6px; font-family:var(--sans); font-size:13px; font-weight:500; cursor:pointer;
+}
+input[type="date"]{ cursor:text; color-scheme:dark; font-family:var(--mono); }
+select:hover, .btn:hover, input[type="date"]:hover{ border-color:#3A4A6B; }
+.btn.active{ background:#1F2C42; border-color:#3E5378; color:#fff; }
+.date-range{ display:flex; gap:6px; }
+
+h2.section-title{ font-size:15px; font-weight:600; margin:0 0 12px; display:flex; align-items:center; gap:10px; }
+h2.section-title .hint{ font-size:11.5px; color:var(--text-dim); font-weight:400; }
+.section{ margin-bottom:36px; }
+
+.kpis{ display:grid; grid-template-columns:repeat(5,1fr); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:8px; overflow:hidden; margin-bottom:28px; }
+.kpi{ background:var(--panel); padding:16px 18px; }
+.kpi .label{ color:var(--text-dim); font-size:11.5px; margin-bottom:8px; }
+.kpi .value{ font-family:var(--mono); font-size:21px; font-weight:600; letter-spacing:-0.01em; }
+.kpi .delta{ font-family:var(--mono); font-size:12px; margin-top:4px; }
+.delta.up{ color:var(--scale); } .delta.down{ color:var(--kill); } .delta.flat{ color:var(--text-dim); }
+
+.channel-cards{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:28px; }
+.chcard{ background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:18px 20px; }
+.chcard .chhead{ display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+.chdot{ width:10px; height:10px; border-radius:50%; }
+.chcard h3{ margin:0; font-size:14px; font-weight:600; }
+.chmetrics{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+.chmetrics .m .l{ color:var(--text-dim); font-size:11px; margin-bottom:4px; }
+.chmetrics .m .v{ font-family:var(--mono); font-size:16px; font-weight:600; }
+.sharebar{ height:6px; border-radius:3px; background:var(--line); margin-top:14px; overflow:hidden; display:flex; }
+.sharebar .seg{ height:100%; }
+
+.reconcile{ background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:18px 20px 10px; }
+.reconcile .legend{ display:flex; gap:16px; font-size:12px; color:var(--text-dim); margin-bottom:14px; }
+.reconcile .legend span{ display:flex; align-items:center; gap:6px; }
+.recon-row{ display:grid; grid-template-columns:70px 1fr 90px; align-items:center; gap:10px; margin-bottom:10px; }
+.recon-row .day{ font-size:12px; color:var(--text-dim); font-family:var(--mono); }
+.recon-bars{ display:flex; flex-direction:column; gap:3px; }
+.recon-bar-track{ height:9px; border-radius:3px; background:var(--panel-2); overflow:hidden; }
+.recon-bar-fill{ height:100%; border-radius:3px; }
+.recon-diff{ font-family:var(--mono); font-size:12px; text-align:left; direction:ltr; }
+.reconcile-note{ font-size:12px; color:var(--text-dim); padding:10px 0 4px; border-top:1px solid var(--line); margin-top:6px; }
+
+.table-wrap{ border:1px solid var(--line); border-radius:8px; overflow-x:auto; background:var(--panel); }
+table{ width:100%; border-collapse:collapse; }
+thead th{
+  text-align:right; font-size:11.5px; font-weight:600; color:var(--text-dim); padding:11px 14px;
+  background:var(--panel-2); border-bottom:1px solid var(--line); white-space:nowrap; cursor:pointer; user-select:none;
+}
+thead th:hover{ color:var(--text); }
+tbody tr{ border-bottom:1px solid var(--line); } tbody tr:last-child{ border-bottom:none; }
+tbody tr:hover{ background:#182131; }
+td{ padding:11px 14px; vertical-align:middle; white-space:nowrap; }
+td.name{ white-space:normal; max-width:220px; font-weight:500; }
+td.name .sub{ display:block; color:var(--text-dim); font-size:11.5px; font-weight:400; margin-top:2px; }
+td.num{ font-family:var(--mono); text-align:left; direction:ltr; }
+td.num .vs{ display:block; font-size:11px; color:var(--text-dim); margin-top:2px; }
+.chtag{ display:inline-block; font-size:10.5px; font-weight:600; padding:2px 7px; border-radius:4px; margin-inline-start:6px; }
+.chtag.meta{ background:rgba(91,141,239,0.15); color:var(--meta); }
+.chtag.google{ background:rgba(242,184,75,0.15); color:var(--google); }
+.trend{ display:inline-flex; align-items:center; gap:4px; font-family:var(--mono); }
+.trend.up{ color:var(--scale); } .trend.down{ color:var(--kill); } .trend.flat{ color:var(--text-dim); }
+.badge{ display:inline-block; padding:4px 10px; border-radius:5px; font-size:12px; font-weight:600; }
+.badge.scale{ background:var(--scale-bg); color:var(--scale); }
+.badge.maintain{ background:var(--maintain-bg); color:var(--maintain); }
+.badge.watch{ background:var(--watch-bg); color:var(--watch); }
+.badge.kill{ background:var(--kill-bg); color:var(--kill); }
+.reason{ color:var(--text-dim); font-size:11.5px; margin-top:3px; max-width:200px; white-space:normal; }
+
+.urgent-panel{ background:var(--panel); border:1px solid rgba(229,86,107,0.3); border-radius:8px; margin-bottom:20px; overflow:hidden; }
+.urgent-head{ background:var(--kill-bg); color:var(--kill); font-size:13px; font-weight:700; padding:10px 16px; }
+.urgent-item{ display:flex; align-items:center; gap:12px; padding:10px 16px; border-bottom:1px solid var(--line); font-size:12.5px; }
+.urgent-item:last-child{ border-bottom:none; }
+.urgent-item .uplatform{ font-size:11px; font-weight:700; padding:2px 7px; border-radius:4px; }
+.urgent-item .uname{ flex:1; }
+.urgent-item .ureason{ color:var(--text-dim); font-size:11.5px; }
+.urgent-item .uspend{ font-family:var(--mono); font-size:12px; color:var(--text-dim); }
+.spark{ display:inline-flex; align-items:flex-end; gap:2px; height:18px; margin-top:4px; }
+.spark span{ width:4px; border-radius:1px; min-height:2px; }
+.banner{ padding:9px 14px; border-radius:6px; font-size:12.5px; margin-bottom:16px; display:none; }
+.banner.loading{ display:block; background:var(--panel-2); color:var(--text-dim); border:1px solid var(--line); }
+.banner.error{ display:block; background:var(--kill-bg); color:var(--kill); border:1px solid rgba(229,86,107,0.3); }
+.targets-editor{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+.tgroup{ background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:14px 16px; }
+.tgroup h4{ margin:0 0 10px; font-size:12.5px; font-weight:600; display:flex; align-items:center; gap:7px; }
+.trow{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.trow:last-child{ margin-bottom:0; }
+.trow label{ font-size:12px; color:var(--text-dim); }
+.trow input{ width:82px; background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+  font-family:var(--mono); font-size:13px; padding:5px 8px; border-radius:5px; text-align:left; direction:ltr; }
+.trow input:focus{ outline:none; border-color:#3E5378; }
+.treset{ margin-top:10px; font-size:11.5px; color:var(--text-dim); cursor:pointer; text-decoration:underline; }
+.rules{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+.rule{ background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:14px 16px; border-top:3px solid; }
+.rule h4{ margin:0 0 8px; font-size:13px; font-weight:700; }
+.rule .cond{ font-size:12px; color:var(--text-dim); line-height:1.7; }
+.rule .cond code{ font-family:var(--mono); font-size:11px; color:var(--text); background:var(--panel-2); padding:1px 5px; border-radius:3px; }
+.rule .act{ margin-top:10px; padding-top:8px; border-top:1px solid var(--line); font-size:12px; font-weight:600; }
+@media (max-width:900px){ .rules{ grid-template-columns:1fr 1fr; } .kpis{ grid-template-columns:1fr 1fr; } .channel-cards{ grid-template-columns:1fr; } }
+
+footer{ margin-top:40px; padding-top:16px; border-top:1px solid var(--line); color:var(--text-dim); font-size:11.5px; }
+footer code{ background:var(--panel-2); padding:2px 6px; border-radius:4px; font-family:var(--mono); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <span class="tag">MAKE-E · לוח פנימי לקמפיינרים · Meta + Google + GA4</span>
+    <h1 id="clientTitle">Crazy Line</h1>
+  </div>
+  <div class="controls">
+    <select id="clientSelect"></select>
+    <div class="date-range">
+      <input type="date" id="dateFrom">
+      <span style="color:var(--text-dim);align-self:center;">—</span>
+      <input type="date" id="dateTo">
+      <button class="btn" data-range="7">7 ימים</button>
+      <button class="btn active" data-range="14">14 ימים</button>
+      <button class="btn" data-range="30">30 ימים</button>
+      <button class="btn" id="applyRange" style="background:#1F2C42;border-color:#3E5378;">החל סינון</button>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h2 class="section-title">מבט על — כל הערוצים <span class="hint">Meta + Google, לפני השוואה ל-GA4</span></h2>
+  <div class="banner" id="statusBanner"></div>
+  <div class="kpis" id="kpiStrip"></div>
+
+<div class="urgent-panel" id="urgentPanel" style="display:none">
+  <div class="urgent-head">⚡ פעולות דחופות עכשיו</div>
+  <div id="urgentList"></div>
+</div>
+  <div class="channel-cards" id="channelCards"></div>
+</div>
+
+<div class="section">
+  <h2 class="section-title">הכנסות פלטפורמה מול GA4 <span class="hint" id="ga4DataSource">בדיקת פער ייחוס</span></h2>
+  <div class="reconcile" id="reconcileBlock"></div>
+</div>
+
+<div class="section">
+  <h2 class="section-title">יעדים <span class="hint" id="targetsNote">שינוי כאן מחשב מחדש את כל ההמלצות מיידית</span></h2>
+  <div class="targets-editor" id="targetsEditor"></div>
+</div>
+
+<div class="section">
+  <h2 class="section-title">חוקי ההחלטה <span class="hint" id="rulesTargets"></span></h2>
+  <div class="rules" id="rulesBlock"></div>
+</div>
+
+<div class="section">
+  <h2 class="section-title">Meta — מודעות <span class="count" id="metaAdCount"></span> <span class="hint" id="metaDataSource">רמת Ad, החלטת Scale/Maintain/Watch/Kill</span></h2>
+  <div class="table-wrap">
+    <table id="metaAdsTable">
+      <thead><tr>
+        <th data-key="status">המלצה</th>
+        <th data-key="name">מודעה / קמפיין</th>
+        <th data-key="spend">הוצאה</th>
+        <th data-key="roas">ROAS</th>
+        <th data-key="cpa">CPA</th>
+        <th data-key="trend">טרנד 7ד׳</th>
+        <th data-key="freq">Frequency</th>
+        <th data-key="days">ימי ריצה</th>
+      </tr></thead>
+      <tbody id="metaAdsBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="section">
+  <h2 class="section-title">Meta — קמפיינים <span class="hint">רולאפ מהמודעות</span></h2>
+  <div class="table-wrap">
+    <table id="metaCampTable">
+      <thead><tr>
+        <th data-key="status">המלצה</th><th data-key="name">קמפיין</th><th data-key="spend">הוצאה</th><th data-key="roas">ROAS</th>
+        <th data-key="cpa">CPA</th><th data-key="trend">טרנד 7ד׳</th><th data-key="activeAds">מודעות פעילות</th>
+      </tr></thead>
+      <tbody id="metaCampBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="section">
+  <h2 class="section-title">Google Ads — קמפיינים <span class="count" id="googleCampCount"></span> <span class="hint" id="googleDataSource">Search / PMax / Shopping</span></h2>
+  <div class="table-wrap">
+    <table id="googleTable">
+      <thead><tr>
+        <th data-key="status">המלצה</th>
+        <th data-key="name">קמפיין</th>
+        <th data-key="type">סוג</th>
+        <th data-key="spend">הוצאה</th>
+        <th data-key="roas">ROAS</th>
+        <th data-key="cpa">CPA</th>
+        <th data-key="trend">טרנד 7ד׳</th>
+        <th data-key="days">ימי ריצה</th>
+      </tr></thead>
+      <tbody id="googleBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<footer>
+  הדשבורד מושך נתונים חיים מ-<code>/campaigner</code> ב-Worker (ראה <code>API_BASE</code> בראש הסקריפט). אם המשיכה נכשלת, מוצג סנפשוט שמור עם באנר אזהרה. שדות Windsor: Meta — <code>ad_id/ad_name/campaign/spend/frequency/ad_created_time/purchase_roas_omni_purchase/cost_per_action_type_omni_purchase</code>; Google — <code>campaign/campaign_type/spend/roas/cost_per_conversion/start_date</code> (roas מוחזר כאחוז, מחולק ב-100); GA4 — <code>date/totalrevenue</code>. טרנד = שינוי ב-ROAS מול חלון קודם באורך זהה. חשבונות Meta: 2562301110668961, 918073650786458, 708681422636732, 265005426163824, 661581863643798. Google: 654-753-2446, 700-518-0619, 477-626-3831, 377-969-5637, 178-480-5862. GA4: 454540408, 518599842, 152370243, 401528124, 554232841. לוגיקת ההמלצות: <code>classify()</code>; תקרות Frequency נפרדות לפרוספקטינג ולרימרקטינג, עם זיהוי אוטומטי לפי שם הקמפיין/מודעה.
+</footer>
+
+<script>
+// Point this at your deployed worker. Empty string = stay on the baked-in snapshot.
+const API_BASE = "https://make-e-campaigner.erezsteiner.workers.dev";
+
+const CLIENTS = {
+  crazyline: {
+    label: "Crazy Line",
+    metaAccountId: "2562301110668961",
+    meta: {
+      targets: { roas: 4.5, cpa: 85, freqProspecting: 2.5, freqRetargeting: 6.0 },
+      dataSource: "live — Windsor.ai, last_30_days, נמשך 2026-09-12",
+      ads: [
+        {name:"sales_advantage_advantage_S_26_caru_dresses-to199-nis_13-04-26", campaign:"paid_meta_sales_dynamic_caru_ampaign", spend:462, roas:9.12, cpa:27.2, trend:null, freq:2.65, days:97},
+        {name:"sales_advantage_advantage_S_26_caru_s26-dresses_05-05-26", campaign:"paid_meta_sales_dynamic_caru_ampaign", spend:417, roas:7.74, cpa:32.1, trend:null, freq:1.82, days:97},
+        {name:"sales_super-sale_data_S_26_caru_s-25-items-to-99-nis_15-06-26", campaign:"paid_meta_sales_dynamic_caru_ampaign", spend:1383, roas:5.89, cpa:33.7, trend:null, freq:2.56, days:89},
+        {name:"sales_super-sale_rmkt_S_26_caru_s-25-items-to-99_15-06-26 - Copy", campaign:"paid_meta_sales_dynamic_caru_ampaign", spend:1560, roas:8.94, cpa:26.9, trend:null, freq:4.2, days:89},
+        {name:"sales_new-collection_rmkt_S_26_caru_sale-50%-off_28-06-26 - Copy", campaign:"paid_meta_sales_dynamic_caru_ampaign", spend:323, roas:7.61, cpa:35.9, trend:null, freq:2.14, days:76},
+        {name:"sales_new-collection_data_s_26_caru_pants-and-skirts_12-07-26", campaign:"paid_meta_sales_dynamic_caru_ampaign", spend:385, roas:15.55, cpa:15.4, trend:null, freq:2.04, days:62},
+        {name:"sales_new-collection_rmkt_s_26_caru_pants-and-skirts_12-07-26 - Copy", campaign:"paid_meta_sales_dynamic_caru_ampaign", spend:511, roas:13.25, cpa:15.5, trend:null, freq:2.89, days:62},
+        {name:"sales_new-collection_rmkt_W_26_postlink_150-days-aban-coupon (A)", campaign:"Test - 6_monthes-no-purchasers_v2-7d-attr", spend:6778, roas:11.98, cpa:23.5, trend:-48, freq:6.11, days:128},
+        {name:"sales_accessories_rmkt_s_26_postlink_beachwear-from-79_21-07-26", campaign:"paid_meta_sales_accessories", spend:906, roas:17.96, cpa:16.5, trend:null, freq:2.92, days:53},
+        {name:"sales_new-collection_rmkt_W_26_postlink_150-days-aban-coupon (B)", campaign:"Test - 6_monthes-no-purchasers_v2-7d-attr", spend:4318, roas:10.85, cpa:26.3, trend:20, freq:6.95, days:128},
+        {name:"paid_meta_abandoned_cart_campaign_08-26 - V4", campaign:"paid_meta_abandoned_cart_campaign-02-2026", spend:4821, roas:16.51, cpa:15.4, trend:-25, freq:10.57, days:41},
+        {name:"lucci-ig-post-engagemant-video (Engagement)", campaign:"paid-meta-engagement-video-campaign", spend:2355, roas:0.14, cpa:1177.7, trend:null, freq:2.95, days:38},
+        {name:"sales_Influencer_new_s_26_video_vered-70%-off_09-08-26", campaign:"paid_meta_sales_influencers_v3", spend:1687, roas:12.9, cpa:37.5, trend:null, freq:1.94, days:34},
+        {name:"sales_new-collection_rmkt_S_26_video_shirts-49-to-129_12-08-26", campaign:"paid_meta_sales_s26_campaign", spend:1057, roas:13.96, cpa:17.9, trend:null, freq:2.68, days:31},
+        {name:"lucci-last-chance-ig-post (Engagement)", campaign:"paid-meta-engagement-video-campaign", spend:341, roas:0, cpa:0, trend:null, freq:1.5, days:31},
+        {name:"sales_weekend_advantage_s_26_caru_60-to-70%-off_14-08-26", campaign:"c257_aug_14th_weekend_sales_campaign", spend:1396, roas:16.62, cpa:16.6, trend:null, freq:2.42, days:30},
+        {name:"sales_prospects_rmkt_S_26_caru_sale-50%-off_16-08-26", campaign:"paid_meta_sales_prospects_campaign", spend:2172, roas:5.66, cpa:53.0, trend:397, freq:2.29, days:27},
+        {name:"sales_prospects_rmkt_s_26_caru_pants-and-skirts_16-08-26", campaign:"paid_meta_sales_prospects_campaign", spend:1122, roas:2.03, cpa:140.3, trend:null, freq:2.56, days:27},
+        {name:"sales_Super-Sale_data_w_26_postlink_special-price-to-79_03-03-26", campaign:"paid_meta_sales_to_99_items", spend:2950, roas:9.93, cpa:25.2, trend:-17, freq:3.66, days:193},
+        {name:"sales_weekend_advantage_s_26_caru_60-to-70%-off (aug21)", campaign:"c259_aug_21st_weekend_sales_campaign", spend:1749, roas:30.23, cpa:8.9, trend:null, freq:2.37, days:23},
+        {name:"sales_prospects_new_s_26_video_dresses-to-99_26-08-26", campaign:"paid_meta_sales_prospects_campaign", spend:363, roas:12.94, cpa:30.3, trend:null, freq:1.32, days:17},
+        {name:"sales_dress_rmkt_s_26_video_dresses-to-99_26-08-26", campaign:"paid_meta_sales_dress_v3", spend:710, roas:7.04, cpa:30.9, trend:null, freq:1.79, days:17},
+        {name:"sales_night_advantage_w_27_caru_500-to-350_26-08-26", campaign:"c261_aug_26th_night_sales_campaign", spend:315, roas:30.78, cpa:11.7, trend:null, freq:1.48, days:17},
+        {name:"sales_new-collection_data_S_26_caru_items-to-99_30-08-26", campaign:"paid_meta_sales_dynamic_caru_ampaign", spend:612, roas:9.55, cpa:29.2, trend:null, freq:2.0, days:13},
+        {name:"sales_new-collection_rmkt_S_26_caru_items-to-99_30-08-26", campaign:"paid_meta_sales_dynamic_caru_ampaign", spend:757, roas:8.13, cpa:27.0, trend:null, freq:3.16, days:13},
+        {name:"sales_prospects_new_w_27_caru_holiday-collection_03-09-26", campaign:"paid_meta_sales_prospects_campaign", spend:738, roas:1.69, cpa:147.5, trend:null, freq:2.19, days:9},
+        {name:"sales_weekend_advantage_w_27_caru_50-or-80-off_04-09-26", campaign:"c264_sep_4th_weekend_sales_campaign", spend:1122, roas:22.05, cpa:15.4, trend:null, freq:1.87, days:8},
+        {name:"mami-ig-post (Engagement)", campaign:"paid-meta-engagement-mami-IG-promo", spend:1374, roas:0, cpa:0, trend:null, freq:1.2, days:4},
+        {name:"sales_weekend_advantage_s_26_postlink_3-items-200 (A)", campaign:"c266_sep_10th_weekend_sales_campaign", spend:506, roas:21.5, cpa:13.7, trend:null, freq:2.1, days:2},
+        {name:"sales_dress_rmkt_S_26_postlink_black-dress-and-sizes", campaign:"paid_meta_sales_dress_v3", spend:2493, roas:13.59, cpa:19.8, trend:-15, freq:3.27, days:118},
+        {name:"sales_new-collection_rmkt_S_26_postlink_sale-50%-off_28-06-26", campaign:"paid_meta_sales_s26_campaign", spend:2625, roas:12.69, cpa:19.7, trend:-13, freq:4.11, days:76},
+        {name:"sales_Super-Sale_data_w_26_postlink_29-to-99-full-model", campaign:"paid_meta_sales_to_99_items", spend:2689, roas:11.56, cpa:21.9, trend:33, freq:3.64, days:75},
+        {name:"sales_new-collection_rmkt_S_26_video_sale-up-to-50%-off", campaign:"paid_meta_sales_s26_campaign", spend:1915, roas:15.65, cpa:20.4, trend:null, freq:2.77, days:75},
+        {name:"sales_Super-Sale_advantage_w_26_postlink_29-to-99-full-model", campaign:"paid_meta_sales_to_99_items", spend:671, roas:13.15, cpa:21.6, trend:null, freq:2.1, days:74},
+        {name:"sales_dress_rmkt_S_26_postlink_dress-to-169_16-07-26", campaign:"paid_meta_sales_dress_v3", spend:582, roas:9.84, cpa:27.7, trend:null, freq:1.63, days:58},
+        {name:"sales_dress_rmkt_S_26_postlink_dress-to-169_21-07-26", campaign:"paid_meta_sales_dress_v3", spend:1309, roas:11.35, cpa:21.8, trend:null, freq:2.1, days:53},
+        {name:"sales_Lucci_advantage_w_27_postlink_new-lucci-launch-60-off", campaign:"paid_meta_lucci_sales_campaign_v3_s26", spend:375, roas:6.9, cpa:41.6, trend:null, freq:1.86, days:38},
+        {name:"sales_Lucci_advantage_s_26_video_by-the-pool-up-to-60", campaign:"paid_meta_lucci_sales_campaign_v3_s26", spend:846, roas:13.34, cpa:27.3, trend:null, freq:2.74, days:34},
+        {name:"sales_accessories_rmkt_s_26_postlink_3-items-100-ils", campaign:"paid_meta_sales_accessories", spend:2316, roas:11.37, cpa:22.9, trend:28, freq:3.39, days:31},
+        {name:"sales_carvers_rmkt_s_26_postlink_carvers-base-for-looks", campaign:"paid_meta_sales_accessories", spend:364, roas:18.47, cpa:17.3, trend:null, freq:2.15, days:31},
+        {name:"sales_weekend_advantage_s_26_video_60-to-70%-off_14-08-26", campaign:"c257_aug_14th_weekend_sales_campaign", spend:377, roas:20.82, cpa:13.5, trend:null, freq:1.57, days:30},
+        {name:"traffic_weekend_advantage_s_26_video_60-to-70%-off (Traffic)", campaign:"c258_aug_14th_weekend_traffic_campaign", spend:540, roas:2.18, cpa:180.1, trend:null, freq:1.62, days:30},
+        {name:"sales_new-collection_rmkt_S_26_postlink_up-to-70%-off_13-08-26", campaign:"paid_meta_sales_s26_campaign", spend:1288, roas:19.79, cpa:16.3, trend:null, freq:2.42, days:30},
+        {name:"sales_prospects_rmkt_S_26_postlink_sale-70%-off_16-08-26", campaign:"paid_meta_sales_prospects_campaign", spend:1004, roas:4.25, cpa:59.1, trend:null, freq:2.02, days:27},
+        {name:"traffic_weekend_advantage_s_26_postlink_70%-off (Traffic)", campaign:"c260_aug_21st_weekend_traffic_campaign", spend:607, roas:4.29, cpa:50.6, trend:null, freq:1.67, days:23},
+        {name:"sales_new-collection_rmkt_s_26_postlink_shirts-pants-to-129", campaign:"paid_meta_sales_s26_campaign", spend:673, roas:17.52, cpa:16.4, trend:null, freq:2.37, days:17},
+        {name:"sales_Lucci_advantage_s_26_postlink_last-chance-up-to-70%", campaign:"paid_meta_lucci_sales_campaign_v3_s26", spend:3343, roas:9.83, cpa:34.1, trend:43, freq:2.81, days:17},
+        {name:"traffic_night_advantage_w_27_postlink_500-to-350 (Traffic)", campaign:"c261_aug_26th_night_traffic_campaign", spend:497, roas:0.4, cpa:497.5, trend:null, freq:1.09, days:17},
+        {name:"sales_weekend_advantage_s_26_postlink_4-items-200_28-08-26", campaign:"c262_aug_28th_weekend_sales_campaign", spend:994, roas:34.47, cpa:7.9, trend:null, freq:1.86, days:15},
+        {name:"sales_weekend_advantage_s_26_video_4-items-200_28-08-26", campaign:"c262_aug_28th_weekend_sales_campaign", spend:306, roas:31.32, cpa:8.5, trend:null, freq:1.5, days:15},
+        {name:"traffic_weekend_advantage_s_26_postlink_4-items-200 (Traffic)", campaign:"c263_aug_28th_weekend_traffic_campaign", spend:315, roas:0, cpa:0, trend:null, freq:1.12, days:15},
+        {name:"sales_new-collection_rmkt_w_27_postlink_holiday-edition", campaign:"paid_meta_sales_w27_campaign", spend:820, roas:20.29, cpa:18.6, trend:null, freq:2.83, days:9},
+        {name:"sales_prospects_new_w_27_postlink_holiday-edition", campaign:"paid_meta_sales_prospects_campaign", spend:412, roas:6.34, cpa:41.2, trend:null, freq:1.74, days:9},
+        {name:"sales_Influencer_rmkt_w_27_video_anna-lucci-new-collection", campaign:"paid_meta_sales_influencers_v3", spend:449, roas:11.5, cpa:44.9, trend:null, freq:2.59, days:9},
+        {name:"sales_weekend_advantage_s_26_postlink_2-items-150_04-09-26", campaign:"c264_sep_4th_weekend_sales_campaign", spend:506, roas:25.74, cpa:14.0, trend:null, freq:1.53, days:8},
+        {name:"traffic_weekend_advantage_s_26_postlink_2-items-150 (Traffic)", campaign:"c265_sep_4th_weekend_traffic_campaign", spend:480, roas:1.58, cpa:160.1, trend:null, freq:1.32, days:8},
+        {name:"sales_Super-Sale_data_s_26_video_katya-49-to-99_04-09-26", campaign:"paid_meta_sales_to_99_items", spend:999, roas:6.76, cpa:34.4, trend:null, freq:2.47, days:8},
+        {name:"sales_dress_rmkt_w_27_postlink_dress-to-199_08-09-26", campaign:"paid_meta_sales_dress_v3", spend:688, roas:13.88, cpa:27.5, trend:null, freq:1.95, days:4},
+        {name:"sales_prospects_new_w_27_postlink_dress-to-199_08-09-26", campaign:"paid_meta_sales_prospects_campaign", spend:305, roas:2.46, cpa:101.8, trend:null, freq:1.63, days:4},
+        {name:"basic_new-collection_rmkt_w_27_postlink_basic-pants-199", campaign:"paid_meta_basic_sales_campaign", spend:1448, roas:10.21, cpa:30.8, trend:null, freq:2.8, days:4},
+        {name:"sales_weekend_advantage_s_26_postlink_3-items-200 (B)", campaign:"c266_sep_10th_weekend_sales_campaign", spend:1202, roas:35.16, cpa:9.2, trend:null, freq:1.66, days:2},
+      ]
+    },
+    google: {
+      targets: { roas: 5.0, cpa: 90 },
+      dataSource: "live — Windsor.ai, last_30d, נמשך 2026-09-12",
+      campaigns: [
+        {name:"Brand Campaign", type:"Search", spend:2055, roas:166.9, cpa:1.7, trend:-27, days:667},
+        {name:"paid-google-pmax-categories", type:"PMax", spend:10866, roas:5.68, cpa:50.5, trend:-10, days:115},
+        {name:"paid-google-shopping-pmax-excluded-items", type:"Shopping", spend:5531, roas:5.28, cpa:53.9, trend:-49, days:83},
+        {name:"paid-google-pmax-w27-collection", type:"PMax", spend:8936, roas:4.15, cpa:60.7, trend:96, days:31},
+      ]
+    },
+    ga4: {
+      dataSource: "live — Windsor.ai (GA4 + Meta + Google Ads), 5–11.9.2026",
+      last7: [
+        {day:"ש׳", platform:96377, ga4:69424},
+        {day:"א׳", platform:37750, ga4:42538},
+        {day:"ב׳", platform:19294, ga4:25566},
+        {day:"ג׳", platform:29551, ga4:23346},
+        {day:"ד׳", platform:28948, ga4:22057},
+        {day:"ה׳", platform:28813, ga4:22898},
+        {day:"ו׳", platform:62697, ga4:44721},
+      ]
+    }
+  },
+  finerituals: {
+    label: "Fine Rituals",
+    metaAccountId: "918073650786458",
+    meta: {
+      targets: { roas: 5.5, cpa: 140, freqProspecting: 2.5, freqRetargeting: 6.0 },
+      dataSource: "live — Windsor.ai, last_30_days, נמשך 2026-09-12",
+      ads: [
+        {name:"cold carusel", campaign:"New DPA", spend:892, roas:1.81, cpa:127, trend:-100, freq:3.27, days:133},
+        {name:"no 1", campaign:"holiday gift | sales", spend:662, roas:3.17, cpa:95, trend:-19, freq:3.76, days:10},
+        {name:"impress bundle unboxing", campaign:"unified sales | broad | 26/7", spend:641, roas:0.30, cpa:641, trend:-100, freq:1.93, days:12},
+        {name:"RMK _ carusel (Frequency קיצוני — DPA לקהל צר)", campaign:"ATC_ 180 DAYS", spend:598, roas:2.49, cpa:100, trend:0, freq:14.24, days:132},
+        {name:"Nailkind box pic 2", campaign:"unified sales | broad | 26/7", spend:420, roas:0.22, cpa:420, trend:0, freq:1.52, days:19},
+        {name:"no 3", campaign:"holiday gift | sales", spend:382, roas:1.55, cpa:127, trend:-56, freq:2.63, days:10},
+        {name:"4 candels 30%", campaign:"unified sales | broad | 26/7", spend:358, roas:1.03, cpa:179, trend:100, freq:1.68, days:9},
+        {name:"candier flowers pic", campaign:"unified sales | broad | 26/7", spend:306, roas:2.59, cpa:77, trend:0, freq:2.49, days:19},
+      ]
+    },
+    google: {
+      targets: { roas: 6.0, cpa: 130 },
+      dataSource: "live — Windsor.ai, last_30d, נמשך 2026-09-12",
+      campaigns: [
+        {name:"products only", type:"PMax", spend:789, roas:3.90, cpa:54.6, trend:-7, days:117},
+      ]
+    },
+    ga4: {
+      dataSource: "live — Windsor.ai (GA4 + Meta + Google Ads), 5–11.9.2026",
+      last7: [
+        {day:"ש׳", platform:441, ga4:412},
+        {day:"א׳", platform:1802, ga4:1865},
+        {day:"ב׳", platform:849, ga4:965},
+        {day:"ג׳", platform:0, ga4:453},
+        {day:"ד׳", platform:59, ga4:209},
+        {day:"ה׳", platform:226, ga4:168},
+        {day:"ו׳", platform:0, ga4:0},
+      ]
+    }
+  },
+  prettyballerinas: {
+    label: "Pretty Ballerinas",
+    metaAccountId: "708681422636732",
+    meta: {
+      targets: { roas: 4.5, cpa: 130, freqProspecting: 2.5, freqRetargeting: 6.0 },
+      dataSource: "live — Windsor.ai, last_30_days, נמשך 2026-09-12",
+      ads: [
+        {name:"Go with the Flow pic 18/8", campaign:"New collection | 27/7 | sales", spend:1640, roas:10.11, cpa:96.5, trend:-45, freq:5.63, days:24},
+        {name:"Go with the Flow", campaign:"New collection | 27/7 | sales", spend:1533, roas:8.29, cpa:139.4, trend:0, freq:3.84, days:46},
+        {name:"Flow with Your Style video 18/8", campaign:"New collection | 27/7 | sales", spend:1178, roas:7.67, cpa:147.3, trend:115, freq:5.23, days:24},
+        {name:"new collection | wine", campaign:"New collection | 27/7 | sales", spend:957, roas:12.27, cpa:79.8, trend:-57, freq:2.76, days:11},
+        {name:"RMK carusel (Frequency קיצוני — DPA לקהל צר)", campaign:"new collection DPA 9/26", spend:520, roas:6.15, cpa:173.0, trend:0, freq:13.31, days:11},
+      ]
+    },
+    google: {
+      targets: { roas: 4.8, cpa: 140 },
+      dataSource: "live — Windsor.ai, last_30d, נמשך 2026-09-12",
+      campaigns: [
+        {name:"רק מוצרים", type:"PMax", spend:883, roas:4.38, cpa:176.6, trend:-100, days:310},
+      ]
+    },
+    ga4: {
+      dataSource: "live — Windsor.ai (GA4 + Meta + Google Ads), 5–11.9.2026",
+      last7: [
+        {day:"ש׳", platform:3049, ga4:5047},
+        {day:"א׳", platform:2344, ga4:0},
+        {day:"ב׳", platform:2889, ga4:5328},
+        {day:"ג׳", platform:3199, ga4:5083},
+        {day:"ד׳", platform:1748, ga4:2848},
+        {day:"ה׳", platform:2547, ga4:3346},
+        {day:"ו׳", platform:1648, ga4:5545},
+      ]
+    }
+  },
+  aristoshmat: {
+    label: "אריסטו שמט",
+    metaAccountId: "265005426163824",
+    meta: {
+      targets: { roas: 6.5, cpa: 100, freqProspecting: 2.5, freqRetargeting: 6.0 },
+      dataSource: "live — Windsor.ai, last_30d, נמשך 2026-09-12",
+      ads: [
+        {name:"DPA_A2C_30_Days (Frequency קיצוני — DPA לקהל צר)", campaign:"A_AWO_A2C - Copy", spend:5024, roas:8.45, cpa:35.1, trend:-60, freq:15.93, days:195},
+        {name:"DPA_All_Porspects", campaign:"DPA_All_Porspects", spend:4722, roas:7.14, cpa:36.9, trend:58, freq:4.93, days:177},
+        {name:"Bestsellers_DPA_Aug26", campaign:"A_List_Go_DPA", spend:1882, roas:5.46, cpa:69.7, trend:51, freq:4.72, days:23},
+        {name:"Bestsellers_DPA_Aug26 (CPA גבוה משמעותית מהיעד)", campaign:"A_Cold_Go_DPA", spend:1750, roas:1.00, cpa:291.6, trend:-11, freq:3.08, days:23},
+        {name:"4Holiday20%_Sep26", campaign:"A_20%For2New_List_Go_Aug26", spend:611, roas:6.76, cpa:76.3, trend:-60, freq:2.80, days:12},
+        {name:"2=100_Sep26_C", campaign:"A_OutletSale_Cold_Go", spend:619, roas:1.65, cpa:88.5, trend:-3, freq:2.02, days:11},
+        {name:"2=100_Sep26_C", campaign:"A_OutletSale_List_Go", spend:539, roas:3.92, cpa:53.9, trend:-79, freq:2.23, days:11},
+        {name:"4Holiday20%_Sep26", campaign:"A_20%For2New_Cold_Go_Aug26", spend:756, roas:2.28, cpa:188.9, trend:200, freq:1.92, days:12},
+        {name:"UGC_20%NewCollection_Aug26 (הוצאה בלי המרות)", campaign:"A_UGC_20%For2New_Cold_Go_Aug26", spend:478, roas:0, cpa:0, trend:0, freq:1.78, days:13},
+        {name:"UGC_20%NewCollection_Aug26", campaign:"A_UGC_20%For2New_List_Go_Aug26", spend:484, roas:4.84, cpa:69.1, trend:0, freq:2.29, days:13},
+      ]
+    },
+    google: {
+      targets: { roas: 8.0, cpa: 75 },
+      dataSource: "live — Windsor.ai, last_30d, נמשך 2026-09-12",
+      campaigns: [
+        {name:"Search Brand", type:"Search", spend:260, roas:168.3, cpa:1.8, trend:-15, days:619},
+        {name:"Performance Max -DGEN", type:"PMax", spend:1047, roas:3.12, cpa:97.6, trend:-95, days:345},
+        {name:"Jeans-Search", type:"Search", spend:1288, roas:0.39, cpa:1287.7, trend:0, days:223},
+        {name:"Search Competitor", type:"Search", spend:1374, roas:0.79, cpa:268.8, trend:-100, days:220},
+        {name:"Jeans-Shopping", type:"Shopping", spend:1700, roas:1.01, cpa:261.6, trend:-36, days:221},
+        {name:"Brand-Shopping", type:"Shopping", spend:388, roas:16.9, cpa:13.5, trend:-76, days:221},
+        {name:"Dress&Skirts-Shopping", type:"Shopping", spend:1232, roas:3.80, cpa:70.1, trend:-66, days:205},
+        {name:"Dresses & Skirts - Search", type:"Search", spend:1263, roas:1.28, cpa:152.5, trend:200, days:121},
+        {name:"Tops & Shirts - Search", type:"Search", spend:695, roas:1.32, cpa:347.3, trend:0, days:116},
+      ]
+    },
+    ga4: {
+      dataSource: "live — Windsor.ai (GA4 + Meta + Google Ads), 5–11.9.2026",
+      last7: [
+        {day:"ש׳", platform:10538, ga4:10213},
+        {day:"א׳", platform:4376, ga4:4633},
+        {day:"ב׳", platform:6096, ga4:7745},
+        {day:"ג׳", platform:6392, ga4:5687},
+        {day:"ד׳", platform:4515, ga4:5621},
+        {day:"ה׳", platform:5207, ga4:3108},
+        {day:"ו׳", platform:1960, ga4:1173},
+      ]
+    }
+  },
+  pablo: {
+    label: "PABLO",
+    metaAccountId: "661581863643798",
+    meta: {
+      targets: { roas: 2.5, cpa: 100, freqProspecting: 2.5, freqRetargeting: 6.0 },
+      dataSource: "live — Windsor.ai — ממתין לנתונים ראשונים",
+      ads: []
+    },
+    google: {
+      targets: { roas: 2.5, cpa: 100 },
+      dataSource: "live — Windsor.ai — ממתין לנתונים ראשונים",
+      campaigns: []
+    },
+    ga4: {
+      dataSource: "live — Windsor.ai (GA4 + Meta + Google Ads)",
+      last7: [
+        {day:"ש׳", platform:0, ga4:0},
+        {day:"א׳", platform:0, ga4:0},
+        {day:"ב׳", platform:0, ga4:0},
+        {day:"ג׳", platform:0, ga4:0},
+        {day:"ד׳", platform:0, ga4:0},
+        {day:"ה׳", platform:0, ga4:0},
+        {day:"ו׳", platform:0, ga4:0},
+      ]
+    }
+  }
+};
+
+function fmtMoney(n){ return "₪" + Math.round(n).toLocaleString(); }
+function fmtRoas(n){ return n.toFixed(1) + "x"; }
+function fmtTrend(n){
+  if(n === null || n === undefined) return `<span class="trend flat">—</span>`;
+  const cls = n > 1 ? "up" : (n < -1 ? "down" : "flat");
+  const arrow = n > 1 ? "▲" : (n < -1 ? "▼" : "▬");
+  return `<span class="trend ${cls}">${arrow} ${Math.abs(n)}%</span>`;
+}
+function badge(status){
+  const labels = {scale:"Scale", maintain:"Maintain", watch:"Watch", kill:"Kill"};
+  return `<span class="badge ${status}">${labels[status]}</span>`;
+}
+function funnelOf(a){
+  const t = ((a.name||"") + " " + (a.campaign||"")).toLowerCase();
+  if(/rmkt|dpa|aban|retarget|_list_go|atc|180|no-purchasers|a2c/.test(t)) return "retargeting";
+  return "prospecting";
+}
+function freqCeiling(a, targets){
+  return funnelOf(a)==="retargeting" ? targets.freqRetargeting : targets.freqProspecting;
+}
+function classify(a, targets, opts){
+  opts = opts || {};
+  const roasRatio = a.roas / targets.roas;
+  const cpaRatio = targets.cpa && a.cpa ? a.cpa / targets.cpa : (a.cpa === 0 ? 2 : 1);
+  const ceiling = opts.hasFreq ? freqCeiling(a, targets) : null;
+  const highFreq = opts.hasFreq ? a.freq >= ceiling : false;
+  const newAd = a.days < 4;
+  const trendKnown = a.trend !== null && a.trend !== undefined;
+  const label = funnelOf(a)==="retargeting" ? "רימרקטינג" : "פרוספקטינג";
+
+  if(newAd) return {status:"watch", reason:`${a.days} ימי ריצה — מוקדם מדי לקבל החלטה`};
+  if(a.cpa === 0 && a.spend > 300) return {status:"kill", reason:"הוצאה מעל ₪300 בלי המרות"};
+  if(roasRatio >= 1.2 && cpaRatio <= 0.9 && (!trendKnown || a.trend >= 0) && !highFreq)
+    return {status:"scale", reason:`ROAS ${roasRatio.toFixed(1)}x מהיעד` + (trendKnown ? ", טרנד יציב/עולה" : "")};
+  if(roasRatio < 0.6 || cpaRatio > 1.6)
+    return {status:"kill", reason: cpaRatio > 1.6 ? `CPA ${cpaRatio.toFixed(1)}x מעל היעד` : `ROAS רק ${(roasRatio*100).toFixed(0)}% מהיעד`};
+  if(highFreq && trendKnown && a.trend < -10)
+    return {status:"kill", reason:`Frequency ${a.freq.toFixed(1)} מעל תקרת ${label} (${ceiling}) + טרנד יורד`};
+  if(highFreq)
+    return {status:"watch", reason:`Frequency ${a.freq.toFixed(1)} מעל תקרת ${label} (${ceiling}) — לרענן קריאייטיב`};
+  if(trendKnown && a.trend < -15) return {status:"watch", reason:"טרנד יורד — לעקוב מקרוב"};
+  return {status:"maintain", reason:"בטווח היעד — להמשיך לנטר"};
+}
+
+let currentClient = "crazyline";
+let sortState = {};
+// "Today" for the range buttons = yesterday (last full day of data), computed on load.
+const TODAY = (()=>{ const d = new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate() - 1); return d; })();
+let rangeDays = 14;
+
+// Local-date ISO string (toISOString() is UTC and shifts the day back in Israel time)
+function isoDate(d){
+  const p = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+}
+function setDateInputsFromDays(days){
+  const to = new Date(TODAY);
+  const from = new Date(TODAY); from.setDate(from.getDate() - (days - 1));
+  document.getElementById("dateFrom").value = isoDate(from);
+  document.getElementById("dateTo").value = isoDate(to);
+}
+function daysBetween(fromStr, toStr){
+  const from = new Date(fromStr), to = new Date(toStr);
+  return Math.max(1, Math.round((to - from) / 86400000) + 1);
+}
+
+function buildSpark(arr){
+  if(!arr||arr.length<2) return "";
+  const max = Math.max(...arr, 0.01);
+  return arr.map(v=>{
+    const h = Math.max(2, Math.round((v/max)*18));
+    const col = v<=0?"var(--kill)":v>=(max*0.8)?"var(--scale)":"var(--maintain)";
+    return `<span style="height:${h}px;background:${col}"></span>`;
+  }).join("");
+}
+
+function renderUrgent(actions){
+  const panel = document.getElementById("urgentPanel");
+  if(!actions||!actions.length){ panel.style.display="none"; return; }
+  panel.style.display="block";
+  document.getElementById("urgentList").innerHTML = actions.map(a=>{
+    const col = a.priority==="kill"?"var(--kill)":"var(--scale)";
+    const bg  = a.priority==="kill"?"var(--kill-bg)":"var(--scale-bg)";
+    return `<div class="urgent-item">
+      <span class="uplatform" style="background:${bg};color:${col}">${a.platform}</span>
+      <span class="badge ${a.priority}" style="font-size:11px;padding:2px 8px">${a.priority==="kill"?"Kill":"Scale"}</span>
+      <span class="uname">${a.name}</span>
+      <span class="ureason">${a.reason}</span>
+      <span class="uspend">${fmtMoney(a.spend)}</span>
+    </div>`;
+  }).join("");
+}
+
+function render(){
+  const c = CLIENTS[currentClient];
+  document.getElementById("clientTitle").textContent = c.label;
+  renderUrgent(c.urgentActions||[]);
+  document.getElementById("metaDataSource").textContent = c.meta.dataSource || "";
+  document.getElementById("googleDataSource").textContent = c.google.dataSource || "";
+  document.getElementById("ga4DataSource").textContent = c.ga4.dataSource || "";
+
+  // Targets editor
+  const t = c.meta.targets, gt = c.google.targets;
+  document.getElementById("targetsEditor").innerHTML = `
+    <div class="tgroup">
+      <h4><span class="chdot" style="background:var(--meta)"></span>Meta — ביצועים</h4>
+      <div class="trow"><label>יעד ROAS</label><input type="number" step="0.1" data-t="meta.roas" value="${t.roas}"></div>
+      <div class="trow"><label>יעד CPA (₪)</label><input type="number" step="1" data-t="meta.cpa" value="${t.cpa}"></div>
+    </div>
+    <div class="tgroup">
+      <h4><span class="chdot" style="background:var(--watch)"></span>Meta — תקרת Frequency</h4>
+      <div class="trow"><label>פרוספקטינג</label><input type="number" step="0.1" data-t="meta.freqProspecting" value="${t.freqProspecting}"></div>
+      <div class="trow"><label>רימרקטינג / DPA</label><input type="number" step="0.1" data-t="meta.freqRetargeting" value="${t.freqRetargeting}"></div>
+    </div>
+    <div class="tgroup">
+      <h4><span class="chdot" style="background:var(--google)"></span>Google Ads</h4>
+      <div class="trow"><label>יעד ROAS</label><input type="number" step="0.1" data-t="google.roas" value="${gt.roas}"></div>
+      <div class="trow"><label>יעד CPA (₪)</label><input type="number" step="1" data-t="google.cpa" value="${gt.cpa}"></div>
+    </div>
+  `;
+  document.querySelectorAll("#targetsEditor input").forEach(inp=>{
+    inp.addEventListener("change", e=>{
+      const [chan, key] = e.target.dataset.t.split(".");
+      const v = parseFloat(e.target.value);
+      if(!isNaN(v) && v > 0){ CLIENTS[currentClient][chan].targets[key] = v; render(); }
+    });
+  });
+
+  // Decision rules panel
+  document.getElementById("rulesTargets").textContent =
+    `${c.label} — Meta: ROAS ${t.roas}x · CPA ₪${t.cpa} · Freq פרוספקטינג ${t.freqProspecting} / רימרקטינג ${t.freqRetargeting} | Google: ROAS ${gt.roas}x · CPA ₪${gt.cpa}`;
+  document.getElementById("rulesBlock").innerHTML = `
+    <div class="rule" style="border-top-color:var(--scale)">
+      <h4 style="color:var(--scale)">Scale — להעלות תקציב</h4>
+      <div class="cond">
+        ROAS <code>≥ 1.2×</code> מהיעד<br>
+        וגם CPA <code>≤ 0.9×</code> מהיעד<br>
+        וגם טרנד <code>≥ 0%</code> (אם ידוע)<br>
+        וגם Frequency מתחת לתקרה של שלב המשפך
+      </div>
+      <div class="act" style="color:var(--scale)">להעלות תקציב 20–30%, לבדוק שוב בעוד 3–4 ימים</div>
+    </div>
+    <div class="rule" style="border-top-color:var(--maintain)">
+      <h4 style="color:var(--maintain)">Maintain — לא לגעת</h4>
+      <div class="cond">בטווח היעד — לא עומד בתנאי Scale<br>אבל גם לא חוצה אף סף של Watch/Kill</div>
+      <div class="act" style="color:var(--maintain)">להשאיר תקציב, לנטר שבועית</div>
+    </div>
+    <div class="rule" style="border-top-color:var(--watch)">
+      <h4 style="color:var(--watch)">Watch — לעקוב</h4>
+      <div class="cond">
+        פחות מ-<code>4</code> ימי ריצה<br>
+        או Frequency מעל <code>${t.freqProspecting}</code> (פרוספקטינג) / <code>${t.freqRetargeting}</code> (רימרקטינג)<br>
+        או טרנד מתחת ל-<code>-15%</code>
+      </div>
+      <div class="act" style="color:var(--watch)">לא לשנות תקציב — להכין קריאייטיב חלופי</div>
+    </div>
+    <div class="rule" style="border-top-color:var(--kill)">
+      <h4 style="color:var(--kill)">Kill — לסגור</h4>
+      <div class="cond">
+        ROAS <code>&lt; 60%</code> מהיעד<br>
+        או CPA <code>&gt; 1.6×</code> מהיעד<br>
+        או הוצאה מעל <code>₪300</code> בלי המרות<br>
+        או Frequency מעל התקרה <b>וגם</b> טרנד <code>&lt; -10%</code>
+      </div>
+      <div class="act" style="color:var(--kill)">לכבות את המודעה / לבנות מחדש את הקהל</div>
+    </div>
+  `;
+
+  // KPI strip
+  const metaRows = (c.meta.ads||[]).map(a => ({...a, ...classify(a, c.meta.targets, {hasFreq:true})}));
+  const googleRows = (c.google.campaigns||[]).map(a => ({...a, ...classify(a, c.google.targets, {hasFreq:false})}));
+  const metaSpend = metaRows.reduce((s,a)=>s+a.spend,0);
+  const metaRevenue = metaRows.reduce((s,a)=>s+a.spend*a.roas,0);
+  const googleSpend = googleRows.reduce((s,a)=>s+a.spend,0);
+  const googleRevenue = googleRows.reduce((s,a)=>s+a.spend*a.roas,0);
+  const totalSpend = metaSpend + googleSpend;
+  const totalPlatformRevenue = metaRevenue + googleRevenue;
+  const blendedMER = totalSpend > 0 ? totalPlatformRevenue / totalSpend : 0;
+  const ga4Total = c.ga4.last7.reduce((s,d)=>s+Math.max(0,d.ga4),0);
+  const platformTotal7d = c.ga4.last7.reduce((s,d)=>s+Math.max(0,d.platform),0);
+  const discrepancyPct = platformTotal7d > 0 ? ((platformTotal7d - ga4Total) / platformTotal7d) * 100 : 0;
+  const maxVal = Math.max(1, ...c.ga4.last7.map(d=>Math.max(d.platform||0,d.ga4||0)));
+
+  document.getElementById("kpiStrip").innerHTML = `
+    <div class="kpi"><div class="label">הוצאה כוללת (Meta+Google)</div><div class="value">${fmtMoney(totalSpend)}</div></div>
+    <div class="kpi"><div class="label">הכנסות פלטפורמה (משוער)</div><div class="value">${fmtMoney(totalPlatformRevenue)}</div></div>
+    <div class="kpi"><div class="label">MER משוקלל</div><div class="value">${fmtRoas(blendedMER)}</div></div>
+    <div class="kpi"><div class="label">הכנסות GA4 (7 ימים)</div><div class="value">${fmtMoney(ga4Total)}</div></div>
+    <div class="kpi"><div class="label">פער ייחוס Platform מול GA4</div><div class="value" style="color:${Math.abs(discrepancyPct)>15?'var(--kill)':'var(--watch)'}">${discrepancyPct.toFixed(0)}%</div></div>
+  `;
+
+  // Channel cards
+  const metaShare = metaSpend/totalSpend*100, googleShare = googleSpend/totalSpend*100;
+  document.getElementById("channelCards").innerHTML = `
+    <div class="chcard">
+      <div class="chhead"><span class="chdot" style="background:var(--meta)"></span><h3>Meta Ads</h3></div>
+      <div class="chmetrics">
+        <div class="m"><div class="l">הוצאה</div><div class="v">${fmtMoney(metaSpend)}</div></div>
+        <div class="m"><div class="l">הכנסות</div><div class="v">${fmtMoney(metaRevenue)}</div></div>
+        <div class="m"><div class="l">ROAS</div><div class="v">${fmtRoas(metaSpend>0?metaRevenue/metaSpend:0)}</div></div>
+      </div>
+      <div class="sharebar"><div class="seg" style="width:${totalSpend>0?metaShare:0}%;background:var(--meta)"></div></div>
+    </div>
+    <div class="chcard">
+      <div class="chhead"><span class="chdot" style="background:var(--google)"></span><h3>Google Ads</h3></div>
+      <div class="chmetrics">
+        <div class="m"><div class="l">הוצאה</div><div class="v">${fmtMoney(googleSpend)}</div></div>
+        <div class="m"><div class="l">הכנסות</div><div class="v">${fmtMoney(googleRevenue)}</div></div>
+        <div class="m"><div class="l">ROAS</div><div class="v">${fmtRoas(googleSpend>0?googleRevenue/googleSpend:0)}</div></div>
+      </div>
+      <div class="sharebar"><div class="seg" style="width:${totalSpend>0?googleShare:0}%;background:var(--google)"></div></div>
+    </div>
+  `;
+
+  // Reconciliation
+  const maxVal2 = Math.max(...c.ga4.last7.map(d=>Math.max(d.platform,d.ga4)));
+  document.getElementById("reconcileBlock").innerHTML = `
+    <div class="legend">
+      <span><i style="width:10px;height:10px;border-radius:2px;background:var(--meta);display:inline-block"></i>הכנסות פלטפורמה (Meta+Google מדווח)</span>
+      <span><i style="width:10px;height:10px;border-radius:2px;background:var(--ga4);display:inline-block"></i>הכנסות GA4</span>
+    </div>
+    ${c.ga4.last7.map(d=>{
+      const hasBoth = d.platform > 0 && d.ga4 > 0;
+      const diff = hasBoth ? ((d.platform-d.ga4)/d.platform*100).toFixed(0) : null;
+      const diffLabel = hasBoth ? `${diff}% פער` : "אין בסיס להשוואה";
+      const diffColor = hasBoth ? (Math.abs(diff)>20?'var(--kill)':'var(--text-dim)') : 'var(--text-dim)';
+      return `<div class="recon-row">
+        <div class="day">${d.day}</div>
+        <div class="recon-bars">
+          <div class="recon-bar-track"><div class="recon-bar-fill" style="width:${Math.max(0,d.platform)/maxVal*100}%;background:var(--meta)"></div></div>
+          <div class="recon-bar-track"><div class="recon-bar-fill" style="width:${Math.max(0,d.ga4)/maxVal*100}%;background:var(--ga4)"></div></div>
+        </div>
+        <div class="recon-diff" style="color:${diffColor}">${diffLabel}</div>
+      </div>`;
+    }).join("")}
+    <div class="reconcile-note">כיוון הפער משתנה בין לקוחות: כשהפלטפורמה גבוהה מ-GA4 זה בדרך כלל ייחוס-יתר (חלונות קליק/צפייה); כש-GA4 גבוה יותר, חלק מההכנסה מגיע מערוצים לא-משולמים (אורגני/ישיר/מייל) ולא מהקמפיינים. ימים עם 0 באחד הצדדים מסומנים כ"אין בסיס להשוואה" ולא כפער של 100%. לפני שמסיקים מסקנה תקציבית — להצליב מול Pixel/CAPI ומול הגדרות ה-Attribution Window.</div>
+  `;
+
+  // Meta ads table
+  document.getElementById("metaAdCount").textContent = `${metaRows.length} מודעות פעילות`;
+  document.getElementById("metaAdsBody").innerHTML = metaRows.length ? metaRows.map(a => `
+    <tr>
+      <td>${badge(a.status)}<div class="reason">${a.reason}</div></td>
+      <td class="name">${a.name}<span class="sub">${a.campaign}</span></td>
+      <td class="num">${fmtMoney(a.spend)}</td>
+      <td class="num">${fmtRoas(a.roas)}<span class="vs">יעד ${fmtRoas(c.meta.targets.roas)}</span></td>
+      <td class="num">${fmtMoney(a.cpa)}<span class="vs">יעד ${fmtMoney(c.meta.targets.cpa)}</span></td>
+      <td class="num">${fmtTrend(a.trend)}</td>
+      <td class="num">${fmtTrend(a.trend)}</td>
+      <td class="num" style="min-width:80px">
+        ${a.freq.toFixed(1)}
+        <span class="vs">${funnelOf(a)==="retargeting"?"רימרקטינג":"פרוספקטינג"} / תקרה ${freqCeiling(a, c.meta.targets)}</span>
+      </td>
+      <td class="num">${a.days!=null?a.days:"—"}</td>
+    </tr>`).join("") : `<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-dim)">אין נתונים עדיין — ימשוך אוטומטית ברגע שיהיו קמפיינים פעילים</td></tr>`;
+
+  // Meta campaign rollup
+  const campMap = {};
+  metaRows.forEach(a=>{
+    if(!campMap[a.campaign]) campMap[a.campaign] = {name:a.campaign, spend:0, roasSum:0, cpaSum:0, trendSum:0, count:0, statuses:[]};
+    const cm = campMap[a.campaign];
+    cm.spend += a.spend; cm.roasSum += a.roas*a.spend; cm.cpaSum += a.cpa*a.spend; cm.count += 1; cm.statuses.push(a.status);
+    if(a.trend !== null && a.trend !== undefined){ cm.trendSum += a.trend; cm.trendCount = (cm.trendCount||0)+1; }
+  });
+  const campRows = Object.values(campMap).map(cm=>{
+    const roas = cm.roasSum/cm.spend, cpa = cm.cpaSum/cm.spend;
+    const trend = cm.trendCount ? Math.round(cm.trendSum/cm.trendCount) : null;
+    let status = "maintain";
+    if(cm.statuses.every(s=>s==="kill")) status = "kill";
+    else if(cm.statuses.filter(s=>s==="scale").length > cm.count/2) status = "scale";
+    else if(cm.statuses.some(s=>s==="watch")) status = "watch";
+    return {...cm, roas, cpa, trend, status};
+  });
+  document.getElementById("metaCampBody").innerHTML = campRows.map(cm=>`
+    <tr>
+      <td>${badge(cm.status)}</td>
+      <td class="name">${cm.name}</td>
+      <td class="num">${fmtMoney(cm.spend)}</td>
+      <td class="num">${fmtRoas(cm.roas)}</td>
+      <td class="num">${fmtMoney(Math.round(cm.cpa))}</td>
+      <td class="num">${fmtTrend(cm.trend)}</td>
+      <td class="num">${cm.count}</td>
+    </tr>`).join("");
+
+  // Google campaigns table
+  document.getElementById("googleCampCount").textContent = `${googleRows.length} קמפיינים פעילים`;
+  document.getElementById("googleBody").innerHTML = googleRows.length ? googleRows.map(a => `
+    <tr>
+      <td>${badge(a.status)}<div class="reason">${a.reason}</div></td>
+      <td class="name">${a.name}</td>
+      <td>${a.type}</td>
+      <td class="num">${fmtMoney(a.spend)}</td>
+      <td class="num">${fmtRoas(a.roas)}<span class="vs">יעד ${fmtRoas(c.google.targets.roas)}</span></td>
+      <td class="num">${a.cpa>0?fmtMoney(a.cpa):"—"}<span class="vs">יעד ${fmtMoney(c.google.targets.cpa)}</span></td>
+      <td class="num">${fmtTrend(a.trend)}</td>
+      <td class="num">${a.days!=null?a.days:"—"}</td>
+    </tr>`).join("") : `<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-dim)">אין נתונים עדיין — ימשוך אוטומטית ברגע שיהיו קמפיינים פעילים</td></tr>`;
+}
+
+const clientSelect = document.getElementById("clientSelect");
+Object.keys(CLIENTS).forEach(key=>{
+  const opt = document.createElement("option");
+  opt.value = key; opt.textContent = CLIENTS[key].label;
+  clientSelect.appendChild(opt);
+});
+clientSelect.value = currentClient;
+clientSelect.addEventListener("change", e=>{ currentClient = e.target.value; loadLive(); });
+document.querySelectorAll(".date-range .btn[data-range]").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".date-range .btn[data-range]").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    rangeDays = parseInt(btn.dataset.range, 10);
+    setDateInputsFromDays(rangeDays);
+    loadLive();
+  });
+});
+document.getElementById("applyRange").addEventListener("click", ()=>{
+  const from = document.getElementById("dateFrom").value;
+  const to = document.getElementById("dateTo").value;
+  if(!from || !to || from > to) return;
+  document.querySelectorAll(".date-range .btn[data-range]").forEach(b=>b.classList.remove("active"));
+  rangeDays = daysBetween(from, to);
+  loadLive();
+});
+
+function banner(kind, msg){
+  const el = document.getElementById("statusBanner");
+  el.className = "banner" + (kind ? " " + kind : "");
+  el.textContent = msg || "";
+}
+
+// Fetch with timeout + one retry: the first Windsor call for a big account can be slow (cold cache)
+async function fetchLive(url, attempts = 2, timeoutMs = 75000){
+  let lastErr;
+  for(let i = 0; i < attempts; i++){
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    try{
+      const r = await fetch(url, { cache: "no-store", signal: ctrl.signal });
+      if(!r.ok) throw new Error(`HTTP ${r.status}`);
+      return await r.json();
+    }catch(e){
+      lastErr = e.name === "AbortError" ? new Error("תם הזמן לתגובה מהשרת") : e;
+    }finally{
+      clearTimeout(timer);
+    }
+  }
+  throw lastErr;
+}
+
+async function loadLive(){
+  // Capture client + dates at call time to avoid race conditions
+  const clientKey = currentClient;
+  const from = document.getElementById("dateFrom").value;
+  const to   = document.getElementById("dateTo").value;
+  if(!API_BASE){ banner("", ""); render(); return; }
+
+  // Clear tables immediately so user sees the switch happened
+  document.getElementById("metaAdsBody").innerHTML = `<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-dim)">טוען נתונים חיים ל-${CLIENTS[clientKey].label}…</td></tr>`;
+  document.getElementById("metaCampBody").innerHTML = "";
+  document.getElementById("googleBody").innerHTML = "";
+  document.getElementById("metaAdCount").textContent = "";
+  banner("loading", `טוען נתונים חיים ל-${CLIENTS[clientKey].label} · ${from} → ${to} …`);
+  try{
+    const d = await fetchLive(
+      `${API_BASE}/campaigner?client=${clientKey}&date_from=${from}&date_to=${to}`
+    );
+    if(d.error) throw new Error(d.error);
+
+    // Write data into the correct client slot (clientKey, not currentClient)
+    const c = CLIENTS[clientKey];
+    c.meta.ads          = d.meta.ads;
+    c.meta.dataSource   = d.meta.dataSource;
+    c.meta.targets      = d.meta.targets || c.meta.targets;
+    c.google.campaigns  = d.google.campaigns;
+    c.google.dataSource = d.google.dataSource;
+    c.google.targets    = d.google.targets || c.google.targets;
+    c.ga4.last7         = d.ga4.last7;
+    c.ga4.dataSource    = d.ga4.dataSource;
+    c.urgentActions     = d.urgentActions || [];
+
+    // Show auto-target note if targets were auto-calculated
+    const nt = document.getElementById("targetsNote");
+    if(nt && d.meta.targets && d.meta.targets.autoCalculated){
+      nt.textContent = `מחושב אוטומטית מ-${d.meta.targets.basedOnAds} מודעות (₪${(d.meta.targets.basedOnSpend||0).toLocaleString()}) — ניתן לעריכה`;
+      nt.style.color = "var(--scale)";
+    }
+
+    // Only render if this response is still for the current client
+    // (user might have switched again while fetching)
+    if(clientKey === currentClient){
+      banner("", "");
+      render();
+    }
+  }catch(e){
+    if(clientKey === currentClient){
+      banner("error", `שגיאה במשיכת נתונים (${e.message}) — מוצג סנפשוט ישן מ-12.9.2026, לא נתונים עדכניים. נסו "החל סינון" שוב.`);
+      render();
+    }
+  }
+}
+
+setDateInputsFromDays(rangeDays);
+loadLive();
+</script>
+</body>
+</html>
+<script async src="/.netlify/scripts/hud?variant=public" data-nf-variant="public" data-netlify-site-id="d316cab6-18ba-4f25-a4ed-b4cc88e2c906" data-app-host="app.netlify.com"></script>
