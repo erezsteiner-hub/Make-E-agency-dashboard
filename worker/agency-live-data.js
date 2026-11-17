@@ -33,6 +33,7 @@ const CLIENTS = {
   laster:    { name: "Laster",            meta: "369761200875429",  google: "",             ga4: "315864239" },
   aristo:    { name: "Aristo Shmat",      meta: "265005426163824",  google: "377-969-5637", ga4: "401528124" },
     pablo:    { name: "PABLO",           meta: "661581863643798",  google: "178-480-5862",  ga4: "554232841", shopify: "nwxiec-eq.myshopify.com" },
+  noody:     { name: "Noody",             meta: "5917719238290150", google: "254-166-1235", ga4: "374019988" },   // מטא בדולר – ההמרה לשקל בדף
 };
 
 const WINDSOR_BASE = "https://connectors.windsor.ai/all";
