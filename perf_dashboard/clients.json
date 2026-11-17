@@ -12,6 +12,7 @@
     "pretty": {"v": 1, "name": "פריטי בלרינס", "name_en": "PRETTY BALLERINAS",
                "meta": "708681422636732", "google": "477-626-3831", "ga4": "152370243", "chatgpt_worker": "pretty"},
     "noody": {"v": 1, "name": "Noody", "name_en": "NOODY", "domain": "noodyskin.com",
-              "meta": "5917719238290150", "meta_currency": "USD", "google": "254-166-1235", "ga4": "374019988"}
+              "meta": "5917719238290150", "meta_currency": "USD", "google": "254-166-1235", "ga4": "374019988",
+              "brand": {"logo": "https://www.noodyskin.com/cdn/shop/files/NOODY_logo.png?v=1658575456&width=412"}}
   }
 }

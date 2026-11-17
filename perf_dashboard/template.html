@@ -29,6 +29,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .wrap{max-width:1180px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 header.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;padding-bottom:16px;border-bottom:2px solid var(--ink)}
 .brand{display:flex;flex-direction:column;gap:2px}
+.clogo{max-height:44px;max-width:180px;width:auto;object-fit:contain;margin-bottom:6px;align-self:flex-start}
 .brand small{color:var(--muted);font-size:13px;letter-spacing:.04em}
 h1{font-family:var(--f-display);font-weight:700;font-size:clamp(24px,4vw,34px);margin:0;letter-spacing:-.01em;text-wrap:balance}
 .stamp{font-size:13px;color:var(--muted);text-align:left}
@@ -197,6 +198,15 @@ const HAS_STORE=D.days.some(x=>x.srev!=null);
 const partLbl=d=>PART&&d===ASOF?' <span class="part">חלקי</span>':'';
 
 document.getElementById('brandLine').textContent=(C.name_en||'')+(C.domain?' · '+C.domain:'');
+// מיתוג לקוח (אופציונלי, clients.json → brand): צבע ראשי, צבע לגרפים ולוגו. בלי brand – העיצוב הרגיל של MAKE-E
+if(C.brand){const B=C.brand, vars=(a,s,r)=>(a?`--accent:${a};`:'')+(s?`--accent-soft:${s};`:'')+(r?`--c1:${r};`:'');
+  const lt=vars(B.accent,B.accent_soft,B.accent_rgb), dk=vars(B.accent_dark||B.accent,B.accent_soft_dark,B.accent_rgb_dark||B.accent_rgb);
+  const st=document.createElement('style');
+  st.textContent=`:root{${lt}${B.accent_ink?`--accent-ink:${B.accent_ink};`:''}}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){${dk}}}:root[data-theme="dark"]{${dk}}`;
+  document.head.appendChild(st);
+  if(B.logo){const im=document.createElement('img');im.src=B.logo;im.alt=C.name||'';im.className='clogo';im.onerror=()=>im.remove();
+    document.querySelector('header.top .brand').prepend(im);}
+}
 document.getElementById('pageH1').textContent='מדד ביצועים · '+(C.month||'');
 const [ud,ut]=D.updated.split('T');
 document.getElementById('stamp').innerHTML=`עודכן <b>${dmy(ud)}.${ud.slice(0,4)}${ut?' · '+ut:''}</b><br>`+(PART?'כולל היום עד שעת העדכון':'נתונים עד '+dmy(ASOF))+` · היסטוריה מ-${dmy(days[0].d)}.${days[0].d.slice(0,4)}`;
