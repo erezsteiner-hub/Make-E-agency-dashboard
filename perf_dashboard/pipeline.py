@@ -348,7 +348,7 @@ def run_client(key, c, args, now):
     files["items_daily"] = os.path.join(W, "items_daily.json")
     json.dump({"data": di}, open(files["items_daily"], "w"), ensure_ascii=False)
 
-    cfg = {"client": {k: c[k] for k in ("name", "name_en", "domain") if c.get(k)},
+    cfg = {"client": {k: c[k] for k in ("name", "name_en", "domain", "brand") if c.get(k)},
            "start": str(start), "asof": str(asof), "partial_today": partial, "updated": now.strftime("%Y-%m-%dT%H:%M"),
            "files": files, "google_medium": "google / cpc", "meta_mediums": ["fb / paid", "ig / paid", "facebook / paid",
                                                                            "instagram / paid", "facebook / meta", "meta / paid"],
