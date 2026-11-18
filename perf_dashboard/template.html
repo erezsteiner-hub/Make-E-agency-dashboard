@@ -205,6 +205,7 @@ if(C.brand){const B=C.brand, vars=(a,s,r)=>(a?`--accent:${a};`:'')+(s?`--accent-
   st.textContent=`:root{${lt}${B.accent_ink?`--accent-ink:${B.accent_ink};`:''}}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){${dk}}}:root[data-theme="dark"]{${dk}}`;
   document.head.appendChild(st);
   if(B.logo){const im=document.createElement('img');im.src=B.logo;im.alt=C.name||'';im.className='clogo';im.onerror=()=>im.remove();
+    if(B.logo_bg){im.style.background=B.logo_bg;im.style.padding='8px 14px';im.style.borderRadius='10px';}
     document.querySelector('header.top .brand').prepend(im);}
 }
 document.getElementById('pageH1').textContent='מדד ביצועים · '+(C.month||'');
