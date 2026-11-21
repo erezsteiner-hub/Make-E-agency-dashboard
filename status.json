@@ -1,0 +1,35 @@
+{
+ "updated": "2026-11-21T15:11+02:00",
+ "ids": {
+  "crazy": "989d491814d19914363fcf8c",
+  "pablo": "2a6c94692febc16cbd5008f3",
+  "annabella": "fe052e1badf3e6a455dfc221",
+  "pretty": "f2da3a42e395b2cd89fdf7d8",
+  "noody": "0f6a261b74b837b5bbdd3523"
+ },
+ "built": {
+  "annabella": {
+   "kb": 439,
+   "days": 366
+  },
+  "pretty": {
+   "kb": 317,
+   "days": 366
+  },
+  "noody": {
+   "kb": 436,
+   "days": 366
+  },
+  "crazy": {
+   "kb": 3262,
+   "days": 366
+  },
+  "pablo": {
+   "kb": 329,
+   "days": 305
+  }
+ },
+ "deferred_chunks": 0,
+ "errors": [],
+ "fx_usd_ils": 3.3428
+}
